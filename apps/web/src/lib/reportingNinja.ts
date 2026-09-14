@@ -81,6 +81,31 @@ export async function listConnections(integrationId: string) {
   return data.data.connections;
 }
 
+export interface IntegrationWithAccountCount extends RnIntegrationSummary {
+  accountCount: number;
+}
+
+/**
+ * Checking "does this integration have any connected accounts" means one
+ * /connections call per integration in the catalog (~25 requests) — expensive
+ * enough that every page needing it (dashboard, accounts overview) MUST
+ * share one cached result via this single function + a shared query key,
+ * or navigating between them repeatedly burns through the rate limit and
+ * everything falsely reports "no accounts".
+ */
+export async function listIntegrationsWithAccountCounts(): Promise<IntegrationWithAccountCount[]> {
+  const integrations = await listIntegrations();
+  const settled = await Promise.allSettled(integrations.map((i) => listConnections(i.id)));
+  return integrations.map((integration, i) => {
+    const result = settled[i];
+    const connections = result.status === "fulfilled" ? result.value : [];
+    const accountCount = connections.reduce((sum, c) => sum + c.accounts.length, 0);
+    return { ...integration, accountCount };
+  });
+}
+
+export const INTEGRATIONS_WITH_COUNTS_QUERY_KEY = ["rn-integrations-with-account-counts"] as const;
+
 export interface RnField {
   field_id: string;
   field_name: string;

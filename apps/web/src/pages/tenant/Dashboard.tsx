@@ -5,7 +5,11 @@ import { Plug, Building2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { DashboardBackdrop } from "@/components/layout/DashboardBackdrop";
-import { getIntegrationStatus, listIntegrations, listConnections } from "@/lib/reportingNinja";
+import {
+  getIntegrationStatus,
+  listIntegrationsWithAccountCounts,
+  INTEGRATIONS_WITH_COUNTS_QUERY_KEY,
+} from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 
 export default function TenantDashboard() {
@@ -18,24 +22,19 @@ export default function TenantDashboard() {
   const connected = integrationState?.status === "CONNECTED";
 
   // Real data, not a fixed 5 metrics — every integration in this tenant's
-  // Reporting Ninja account that actually has connected accounts.
-  const { data: connectedIntegrations, isLoading: integrationsLoading } = useQuery({
-    queryKey: ["tenant-dashboard-integrations"],
-    queryFn: async () => {
-      const integrations = await listIntegrations();
-      const settled = await Promise.allSettled(integrations.map((i) => listConnections(i.id)));
-      return integrations
-        .map((integration, i) => {
-          const result = settled[i];
-          const connections = result.status === "fulfilled" ? result.value : [];
-          const accountCount = connections.reduce((sum, c) => sum + c.accounts.length, 0);
-          return { ...integration, accountCount };
-        })
-        .filter((i) => i.accountCount > 0)
-        .sort((a, b) => b.accountCount - a.accountCount);
-    },
+  // Reporting Ninja account that actually has connected accounts. Shares its
+  // query key + a long staleTime with the Accounts overview page, so
+  // switching between them doesn't re-fire ~25 /connections calls each time.
+  const { data: allIntegrations, isLoading: integrationsLoading } = useQuery({
+    queryKey: INTEGRATIONS_WITH_COUNTS_QUERY_KEY,
+    queryFn: listIntegrationsWithAccountCounts,
     enabled: connected,
+    staleTime: 5 * 60 * 1000,
   });
+
+  const connectedIntegrations = allIntegrations
+    ?.filter((i) => i.accountCount > 0)
+    .sort((a, b) => b.accountCount - a.accountCount);
 
   const totalAccounts = connectedIntegrations?.reduce((sum, i) => sum + i.accountCount, 0) ?? 0;
 
