@@ -5,6 +5,7 @@ import { Topbar } from "./Topbar";
 
 const TENANT_NAV: NavItem[] = [
   { to: "/tenant", labelKey: "nav.dashboard", icon: "📊" },
+  { to: "/tenant/reports", labelKey: "nav.reports", icon: "📈" },
   { to: "/tenant/users", labelKey: "nav.users", icon: "👥" },
   { to: "/tenant/settings", labelKey: "nav.settings", icon: "⚙️" },
 ];

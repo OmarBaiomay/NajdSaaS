@@ -9,6 +9,7 @@ alter table agencies enable row level security;
 alter table tenants enable row level security;
 alter table users enable row level security;
 alter table audit_logs enable row level security;
+alter table integration_credentials enable row level security;
 
 -- SUPER_ADMIN connections bypass RLS by setting app.bypass_rls = 'on'.
 create or replace function najd_bypass_rls() returns boolean as $$
@@ -29,4 +30,8 @@ create policy users_isolation on users
 
 drop policy if exists audit_logs_isolation on audit_logs;
 create policy audit_logs_isolation on audit_logs
+  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true)::uuid);
+
+drop policy if exists integration_credentials_isolation on integration_credentials;
+create policy integration_credentials_isolation on integration_credentials
   using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true)::uuid);

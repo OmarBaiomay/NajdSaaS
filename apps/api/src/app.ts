@@ -9,6 +9,7 @@ import { authRouter } from "./modules/auth/auth.routes.js";
 import { agencyRouter } from "./modules/agencies/agency.routes.js";
 import { tenantRouter } from "./modules/tenants/tenant.routes.js";
 import { userRouter } from "./modules/users/user.routes.js";
+import { reportingNinjaRouter } from "./modules/integrations/reportingNinja.routes.js";
 import { notFoundHandler, errorHandler } from "./middleware/error.middleware.js";
 
 export const app = express();
@@ -25,6 +26,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/agencies", agencyRouter);
 app.use("/api/tenants", tenantRouter);
 app.use("/api/users", userRouter);
+app.use("/api/integrations/reporting-ninja", reportingNinjaRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

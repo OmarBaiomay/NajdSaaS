@@ -61,7 +61,8 @@ model Tenant {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  users User[]
+  users       User[]
+  credentials IntegrationCredential[]
 
   @@unique([agencyId, slug])
   @@index([agencyId])
@@ -105,6 +106,42 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+enum IntegrationProvider {
+  REPORTING_NINJA
+}
+
+enum IntegrationStatus {
+  PENDING
+  CONNECTED
+  INVALID
+}
+
+/// One reporting-provider API key per tenant. The raw key is never stored —
+/// only AES-256-GCM ciphertext + iv/authTag, decrypted in-memory per request
+/// (see src/utils/crypto.ts). Uniqueness is per tenant+provider: a tenant has
+/// at most one active key per provider.
+model IntegrationCredential {
+  id           String              @id @default(uuid())
+  agencyId     String
+  tenantId     String
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider     IntegrationProvider @default(REPORTING_NINJA)
+  encryptedKey String
+  iv           String
+  authTag      String
+  keyPreview   String // last 4 chars only, e.g. "••••ab12" — for display, never the full key
+  status       IntegrationStatus   @default(PENDING)
+  lastTestedAt DateTime?
+  lastError    String?
+  createdById  String
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([tenantId, provider])
+  @@index([agencyId])
+  @@map("integration_credentials")
 }
 
 model AuditLog {

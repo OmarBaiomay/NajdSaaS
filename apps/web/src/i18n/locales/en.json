@@ -2,6 +2,7 @@
   "app": { "name": "NajdSaaS" },
   "nav": {
     "dashboard": "Dashboard",
+    "reports": "Reports",
     "tenants": "Tenants",
     "users": "Users",
     "settings": "Settings",
