@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
 import { RevenueChart } from "@/components/charts/RevenueChart";
-import { listConnections, listFields, runQuery } from "@/lib/reportingNinja";
+import { getIntegrationDetail, listConnections, listFields, runQuery } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 
 const ACCENTS = ["brand", "violet", "teal", "amber"] as const;
@@ -19,7 +19,27 @@ export default function IntegrationDetail() {
 
   const [connectionKey, setConnectionKey] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [dataView, setDataView] = useState("");
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
+
+  // Some integrations (Google Ads, Microsoft Ads, YouTube, LinkedIn…) require
+  // a data_view on both /fields and /query — discover that up front.
+  const { data: detail } = useQuery({
+    queryKey: ["rn-integration-detail", integrationId],
+    queryFn: () => getIntegrationDetail(integrationId),
+  });
+  const dataViews = detail?.data_views ?? null;
+  const needsDataView = !!dataViews && dataViews.length > 0;
+  const dataViewOptions: SearchableOption[] = dataViews?.map((dv) => ({ value: dv.id, label: dv.name })) ?? [];
+  const dataViewReady = !needsDataView || !!dataView;
+
+  // Integrations that require account-level settings (e.g. facebook_ads'
+  // attribution_window) expose them with a recommended_value — use that as
+  // the default so a first-time user doesn't have to configure anything.
+  const defaultSettings = useMemo(() => {
+    if (!detail?.settings?.length) return undefined;
+    return Object.fromEntries(detail.settings.map((s) => [s.id, s.recommended_value]));
+  }, [detail]);
 
   const { data: connections, isLoading: connectionsLoading } = useQuery({
     queryKey: ["rn-connections", integrationId],
@@ -36,9 +56,9 @@ export default function IntegrationDetail() {
     ) ?? [];
 
   const { data: fieldsData } = useQuery({
-    queryKey: ["rn-fields", integrationId, connectionKey, accountId],
-    queryFn: () => listFields(integrationId, connectionKey, accountId),
-    enabled: !!connectionKey && !!accountId,
+    queryKey: ["rn-fields", integrationId, dataView],
+    queryFn: () => listFields(integrationId, dataView || undefined),
+    enabled: dataViewReady,
   });
 
   const metricFields = useMemo(() => fieldsData?.fields.filter((f) => f.dim_met === "metric") ?? [], [fieldsData]);
@@ -56,17 +76,19 @@ export default function IntegrationDetail() {
     isFetching: queryLoading,
     error: queryError,
   } = useQuery({
-    queryKey: ["rn-query", integrationId, connectionKey, accountId, activeMetrics.join(",")],
+    queryKey: ["rn-query", integrationId, connectionKey, accountId, dataView, activeMetrics.join(",")],
     queryFn: () =>
       runQuery<Record<string, string | number>>({
         integration_id: integrationId,
         connection_key: connectionKey,
         account_id: accountId,
+        ...(dataView ? { data_view: dataView } : {}),
+        ...(defaultSettings ? { settings: defaultSettings } : {}),
         fields: [dimensionField, ...activeMetrics],
         date_range: { preset: "lastxdays", x: 30 },
         limit: 100,
       }),
-    enabled: !!connectionKey && !!accountId && activeMetrics.length > 0,
+    enabled: dataViewReady && !!connectionKey && !!accountId && activeMetrics.length > 0,
   });
 
   const totals = activeMetrics.reduce<Record<string, number>>((acc, metric) => {
@@ -92,11 +114,24 @@ export default function IntegrationDetail() {
         <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${visual.bg} ${visual.color}`}>
           {visual.icon}
         </span>
-        <h1 className="text-lg font-semibold">{integrationId.replace(/_/g, " ")}</h1>
+        <h1 className="text-lg font-semibold capitalize">{integrationId.replace(/_/g, " ")}</h1>
       </div>
 
       <Card>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={`grid grid-cols-1 gap-4 ${needsDataView ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {needsDataView && (
+            <SearchableSelect
+              label={t("integrations.dataView")}
+              placeholder={t("common.select")}
+              value={dataView}
+              onChange={(v) => {
+                setDataView(v);
+                setSelectedMetrics([]);
+              }}
+              options={dataViewOptions}
+            />
+          )}
+
           <SearchableSelect
             label={t("integrations.account")}
             placeholder={connectionsLoading ? t("common.loading") : t("common.select")}
@@ -105,7 +140,6 @@ export default function IntegrationDetail() {
               const [ck, aid] = v.split("::");
               setConnectionKey(ck ?? "");
               setAccountId(aid ?? "");
-              setSelectedMetrics([]);
             }}
             options={accountOptions}
           />
@@ -116,7 +150,7 @@ export default function IntegrationDetail() {
             value=""
             onChange={(metric) => setSelectedMetrics((prev) => [...prev, metric])}
             options={metricOptions}
-            disabled={!accountId}
+            disabled={!dataViewReady}
           />
         </div>
 
@@ -142,6 +176,10 @@ export default function IntegrationDetail() {
           </div>
         )}
       </Card>
+
+      {needsDataView && !dataView && (
+        <Card className="text-center text-sm text-slate-500">{t("integrations.selectDataView")}</Card>
+      )}
 
       {!accountId && !connectionsLoading && (connections?.length ?? 0) === 0 && (
         <Card className="text-center text-sm text-slate-500">{t("integrations.noAccounts")}</Card>

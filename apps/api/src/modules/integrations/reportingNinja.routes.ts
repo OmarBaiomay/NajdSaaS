@@ -18,6 +18,7 @@ reportingNinjaRouter.post("/test", controller.testConnection);
 reportingNinjaRouter.delete("/key", controller.disconnect);
 
 reportingNinjaRouter.post("/integrations", queryLimiter, controller.listIntegrations);
+reportingNinjaRouter.post("/integrations/detail", queryLimiter, controller.getIntegrationDetail);
 reportingNinjaRouter.post("/connections", queryLimiter, controller.listConnections);
 reportingNinjaRouter.post("/fields", queryLimiter, controller.listFields);
 reportingNinjaRouter.post("/query", queryLimiter, controller.runQuery);

@@ -6,6 +6,7 @@ import {
   queryProxySchema,
   connectionsProxySchema,
   fieldsProxySchema,
+  integrationDetailProxySchema,
 } from "./reportingNinja.validation.js";
 import * as service from "./reportingNinja.service.js";
 
@@ -44,6 +45,13 @@ export const disconnect = asyncHandler(async (req: Request, res: Response) => {
 export const listIntegrations = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = requireTenantId(req);
   const data = await service.proxyRequest(req.auth!.agencyId, tenantId, "/integrations", {});
+  res.json({ data });
+});
+
+export const getIntegrationDetail = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = requireTenantId(req);
+  const input = integrationDetailProxySchema.parse(req.body);
+  const data = await service.proxyRequest(req.auth!.agencyId, tenantId, "/integrations/detail", input);
   res.json({ data });
 });
 

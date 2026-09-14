@@ -21,6 +21,10 @@ export const queryProxySchema = z.object({
   cursor: z.string().optional(),
 });
 
+export const integrationDetailProxySchema = z.object({
+  integration_id: z.string().min(1),
+});
+
 export const connectionsProxySchema = z.object({
   integration_id: z.string().min(1),
   settings: z.record(z.string(), z.unknown()).optional(),
