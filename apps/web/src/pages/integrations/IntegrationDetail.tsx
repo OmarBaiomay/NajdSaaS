@@ -5,15 +5,19 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
-import { getIntegrationDetail, listConnections, listFields, runQuery } from "@/lib/reportingNinja";
+import { getIntegrationDetail, listConnections, listFields, runQuery, type RnField } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 import { groupMetricsByPercentTier } from "@/lib/metricGrouping";
+import { getMetricVisual, pickSimplestMatch, HERO_PRIORITY } from "@/lib/metricVisuals";
+import { pickTimeDimension } from "@/lib/timeDimension";
 
-const ACCENTS = ["brand", "violet", "teal", "amber"] as const;
+const GRID_ACCENTS = ["brand", "violet", "teal", "amber", "sky", "indigo", "emerald", "orange", "pink", "rose"] as const;
+const HERO_COUNT = 5;
 
 // Some providers (Google Ads in particular) reject a query that mixes
 // metrics from incompatible resource categories in one request. Rather than
@@ -58,6 +62,39 @@ async function fetchMetricsBisecting(
   }
 }
 
+/** Picks up to `count` "headline" metrics by keyword priority (impressions,
+ * clicks, spend…), falling back to the highest-total remaining metrics. */
+function pickHeroMetrics(fields: RnField[], totals: Map<string, number>, count: number): RnField[] {
+  const chosen: RnField[] = [];
+  const chosenIds = new Set<string>();
+
+  for (const pattern of HERO_PRIORITY) {
+    if (chosen.length >= count) break;
+    const candidates = fields.filter(
+      (f) => !chosenIds.has(f.field_id) && (pattern.test(f.field_id) || pattern.test(f.field_name))
+    );
+    const match = pickSimplestMatch(candidates);
+    if (match) {
+      const field = fields.find((f) => f.field_id === match.field_id)!;
+      chosen.push(field);
+      chosenIds.add(field.field_id);
+    }
+  }
+
+  if (chosen.length < count) {
+    const remaining = fields
+      .filter((f) => !chosenIds.has(f.field_id))
+      .sort((a, b) => (totals.get(b.field_id) ?? 0) - (totals.get(a.field_id) ?? 0));
+    for (const f of remaining) {
+      if (chosen.length >= count) break;
+      chosen.push(f);
+      chosenIds.add(f.field_id);
+    }
+  }
+
+  return chosen;
+}
+
 export default function IntegrationDetail() {
   const { integrationId = "" } = useParams<{ integrationId: string }>();
   const { t } = useTranslation();
@@ -67,6 +104,7 @@ export default function IntegrationDetail() {
   const [accountId, setAccountId] = useState("");
   const [dataView, setDataView] = useState("");
   const [metricSearch, setMetricSearch] = useState("");
+  const [chartMetric, setChartMetric] = useState("");
 
   // Some integrations (Google Ads, Microsoft Ads, YouTube, LinkedIn…) require
   // a data_view on both /fields and /query — discover that up front.
@@ -108,7 +146,13 @@ export default function IntegrationDetail() {
   });
 
   const metricFields = useMemo(() => fieldsData?.fields.filter((f) => f.dim_met === "metric") ?? [], [fieldsData]);
-  const dimensionField = fieldsData?.default_dimension ?? "day";
+  // Always chart against an actual date field — the API's own
+  // "default_dimension" is frequently a non-time field (account/campaign
+  // name), which would collapse a 30-day trend into a single point.
+  const dimensionField = useMemo(
+    () => pickTimeDimension(fieldsData?.fields ?? [], fieldsData?.default_dimension ?? "day"),
+    [fieldsData]
+  );
   const metricIds = useMemo(() => metricFields.map((f) => f.field_id), [metricFields]);
 
   const {
@@ -149,10 +193,19 @@ export default function IntegrationDetail() {
     [rows, dimensionField]
   );
 
+  const totalFor = (fieldId: string) => sortedRows.reduce((sum, row) => sum + (Number(row[fieldId]) || 0), 0);
+
   const availableMetrics = useMemo(
     () => metricFields.filter((f) => !queryResult?.unavailable.includes(f.field_id)),
     [metricFields, queryResult]
   );
+
+  const totalsById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const f of availableMetrics) map.set(f.field_id, totalFor(f.field_id));
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableMetrics, sortedRows]);
 
   // Metric families like "Video Plays at 25/50/75/100%" tell a much clearer
   // story as a donut than as four disconnected number cards — pull those out.
@@ -161,17 +214,21 @@ export default function IntegrationDetail() {
     [availableMetrics]
   );
 
-  const totalFor = (fieldId: string) => sortedRows.reduce((sum, row) => sum + (Number(row[fieldId]) || 0), 0);
+  const heroMetrics = useMemo(() => pickHeroMetrics(ungrouped, totalsById, HERO_COUNT), [ungrouped, totalsById]);
+  const heroIds = useMemo(() => new Set(heroMetrics.map((f) => f.field_id)), [heroMetrics]);
 
+  const restMetrics = useMemo(() => ungrouped.filter((f) => !heroIds.has(f.field_id)), [ungrouped, heroIds]);
   const visibleMetrics = useMemo(
-    () => ungrouped.filter((f) => f.field_name.toLowerCase().includes(metricSearch.trim().toLowerCase())),
-    [ungrouped, metricSearch]
+    () => restMetrics.filter((f) => f.field_name.toLowerCase().includes(metricSearch.trim().toLowerCase())),
+    [restMetrics, metricSearch]
   );
 
-  const primaryMetric = fieldsData?.default_metric ?? visibleMetrics[0]?.field_id ?? donutGroups[0]?.tiers[0]?.field.field_id;
+  const chartOptions: SearchableOption[] = availableMetrics.map((f) => ({ value: f.field_id, label: f.field_name }));
+  const effectiveChartMetric = chartMetric || fieldsData?.default_metric || heroMetrics[0]?.field_id || "";
+  const chartMetricField = availableMetrics.find((f) => f.field_id === effectiveChartMetric);
   const primaryChartData = sortedRows.map((row) => ({
     label: String(row[dimensionField]),
-    value: Number(row[primaryMetric ?? ""]) || 0,
+    value: Number(row[effectiveChartMetric]) || 0,
   }));
 
   return (
@@ -235,15 +292,42 @@ export default function IntegrationDetail() {
             </p>
           )}
 
-          {primaryMetric && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="mb-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                {metricFields.find((f) => f.field_id === primaryMetric)?.field_name ?? primaryMetric} ·{" "}
-                {t("integrations.last30Days")}
-              </h2>
-              <RevenueChart data={primaryChartData} />
+          {heroMetrics.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {heroMetrics.map((field, i) => {
+                const series = sortedRows.map((row) => Number(row[field.field_id]) || 0);
+                const { icon: Icon, tone } = getMetricVisual(field.field_name);
+                return (
+                  <HeroMetricCard
+                    key={field.field_id}
+                    label={field.field_name}
+                    value={(totalsById.get(field.field_id) ?? 0).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                    icon={Icon}
+                    tone={tone}
+                    variant={i === 0 ? "solid" : "light"}
+                    footer={series.some((v) => v !== 0) ? <Sparkline data={series} /> : undefined}
+                  />
+                );
+              })}
             </div>
           )}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                {chartMetricField?.field_name ?? effectiveChartMetric} · {t("integrations.last30Days")}
+              </h2>
+              <SearchableSelect
+                value={effectiveChartMetric}
+                onChange={setChartMetric}
+                options={chartOptions}
+                className="w-56"
+              />
+            </div>
+            <RevenueChart data={primaryChartData} />
+          </div>
 
           {donutGroups.length > 0 && (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -289,20 +373,23 @@ export default function IntegrationDetail() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleMetrics.map((field, i) => {
               const series = sortedRows.map((row) => Number(row[field.field_id]) || 0);
-              const total = series.reduce((sum, v) => sum + v, 0);
+              const { icon: Icon, tone } = getMetricVisual(field.field_name);
               return (
                 <GlowCard
                   key={field.field_id}
                   label={field.field_name}
-                  value={total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  accent={ACCENTS[i % ACCENTS.length]}
+                  value={(totalsById.get(field.field_id) ?? 0).toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}
+                  icon={<Icon size={16} />}
+                  accent={tone ?? GRID_ACCENTS[i % GRID_ACCENTS.length]}
                   footer={series.some((v) => v !== 0) ? <Sparkline data={series} /> : undefined}
                 />
               );
             })}
           </div>
 
-          {visibleMetrics.length === 0 && (
+          {visibleMetrics.length === 0 && heroMetrics.length === 0 && (
             <Card className="text-center text-sm text-slate-500">{t("common.noResults")}</Card>
           )}
         </>

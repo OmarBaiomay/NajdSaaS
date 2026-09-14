@@ -1,5 +1,24 @@
 import type { ReactNode } from "react";
 import { clsx } from "@/lib/clsx";
+import type { MetricTone } from "@/lib/metricVisuals";
+
+export type GlowAccent = MetricTone | "brand";
+
+// Literal class strings (not template-built) so Tailwind's JIT scanner picks
+// up every one of them regardless of which accent is chosen at runtime.
+const ACCENTS: Record<GlowAccent, string> = {
+  brand: "from-brand-500/60 via-brand-400/10 to-transparent",
+  sky: "from-sky-500/60 via-sky-400/10 to-transparent",
+  indigo: "from-indigo-500/60 via-indigo-400/10 to-transparent",
+  emerald: "from-emerald-500/60 via-emerald-400/10 to-transparent",
+  violet: "from-violet-500/60 via-violet-400/10 to-transparent",
+  orange: "from-orange-500/60 via-orange-400/10 to-transparent",
+  teal: "from-teal-500/60 via-teal-400/10 to-transparent",
+  pink: "from-pink-500/60 via-pink-400/10 to-transparent",
+  rose: "from-rose-500/60 via-rose-400/10 to-transparent",
+  amber: "from-amber-500/60 via-amber-400/10 to-transparent",
+  slate: "from-slate-500/60 via-slate-400/10 to-transparent",
+};
 
 /**
  * Futuristic stat card: gradient border glow + glassmorphism, used on the
@@ -19,23 +38,16 @@ export function GlowCard({
   value: ReactNode;
   delta?: { value: string; positive: boolean };
   icon?: ReactNode;
-  accent?: "brand" | "violet" | "teal" | "amber";
+  accent?: GlowAccent;
   className?: string;
   footer?: ReactNode;
 }) {
-  const accents: Record<string, string> = {
-    brand: "from-brand-500/60 via-brand-400/10 to-transparent",
-    violet: "from-violet-500/60 via-violet-400/10 to-transparent",
-    teal: "from-teal-500/60 via-teal-400/10 to-transparent",
-    amber: "from-amber-500/60 via-amber-400/10 to-transparent",
-  };
-
   return (
     <div className={clsx("group relative rounded-2xl p-[1px]", className)}>
       <div
         className={clsx(
           "absolute inset-0 rounded-2xl bg-gradient-to-br opacity-70 transition-opacity duration-300 group-hover:opacity-100",
-          accents[accent]
+          ACCENTS[accent]
         )}
         aria-hidden
       />
