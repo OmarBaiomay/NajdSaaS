@@ -1,0 +1,25 @@
+{
+  "app": { "name": "NajdSaaS" },
+  "nav": {
+    "dashboard": "Dashboard",
+    "tenants": "Tenants",
+    "users": "Users",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "auth": {
+    "login": "Log in",
+    "email": "Email",
+    "password": "Password",
+    "welcomeBack": "Welcome back"
+  },
+  "dashboard": {
+    "agencyOverview": "Agency Overview",
+    "tenantOverview": "Tenant Overview",
+    "revenue": "Revenue",
+    "activeTenants": "Active Tenants",
+    "activeUsers": "Active Users"
+  },
+  "theme": { "light": "Light", "dark": "Dark" },
+  "language": { "en": "English", "ar": "Arabic" }
+}

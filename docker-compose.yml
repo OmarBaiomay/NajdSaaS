@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: najd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: najd
+      POSTGRES_PASSWORD: najd_dev_password
+      POSTGRES_DB: najd_saas
+    ports:
+      - "5432:5432"
+    volumes:
+      - najd_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U najd -d najd_saas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: najd-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - najd_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  najd_postgres_data:
+  najd_redis_data:

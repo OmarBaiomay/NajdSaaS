@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply antialiased;
+}
+
+/* RTL: flip logical spacing automatically handled by Tailwind's ms-/me-/ps-/pe- utilities,
+   used throughout instead of ml-/mr-/pl-/pr- so the layout mirrors correctly for Arabic. */

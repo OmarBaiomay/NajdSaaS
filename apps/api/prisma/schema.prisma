@@ -1,0 +1,123 @@
+// NajdSaaS — Core multi-tenant schema
+// Model: Agency (platform customer) -> Tenants (sub-accounts) -> Users
+// Isolation strategy: shared schema, every business row scoped by agencyId
+// (and tenantId where applicable), enforced in-app via Prisma middleware
+// AND at the database level via Postgres Row-Level Security policies
+// (see prisma/sql/rls.sql, applied after `prisma migrate dev`).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN   // NajdSaaS platform operator
+  AGENCY_OWNER  // Owns the agency account
+  AGENCY_STAFF  // Works inside the agency, across its tenants
+  TENANT_OWNER  // Owns a sub-account (tenant)
+  TENANT_MEMBER // Works inside a single tenant
+}
+
+enum AgencyStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+model Agency {
+  id        String       @id @default(uuid())
+  name      String
+  slug      String       @unique
+  status    AgencyStatus @default(TRIAL)
+  locale    String       @default("en") // default UI locale: "en" | "ar"
+  logoUrl   String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  users   User[]
+  tenants Tenant[]
+
+  @@map("agencies")
+}
+
+model Tenant {
+  id        String       @id @default(uuid())
+  agencyId  String
+  agency    Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String
+  status    TenantStatus @default(ACTIVE)
+  locale    String       @default("en")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  users User[]
+
+  @@unique([agencyId, slug])
+  @@index([agencyId])
+  @@map("tenants")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  agencyId     String
+  agency       Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  tenantId     String?
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  role         Role      @default(TENANT_MEMBER)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@unique([agencyId, email])
+  @@index([agencyId])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  userAgent String?
+  ipAddress String?
+  revokedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  agencyId  String
+  tenantId  String?
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([agencyId, createdAt])
+  @@map("audit_logs")
+}

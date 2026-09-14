@@ -1,0 +1,25 @@
+{
+  "app": { "name": "نجد" },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "tenants": "الحسابات الفرعية",
+    "users": "المستخدمون",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "welcomeBack": "مرحبًا بعودتك"
+  },
+  "dashboard": {
+    "agencyOverview": "نظرة عامة على الوكالة",
+    "tenantOverview": "نظرة عامة على الحساب",
+    "revenue": "الإيرادات",
+    "activeTenants": "الحسابات النشطة",
+    "activeUsers": "المستخدمون النشطون"
+  },
+  "theme": { "light": "فاتح", "dark": "داكن" },
+  "language": { "en": "الإنجليزية", "ar": "العربية" }
+}
