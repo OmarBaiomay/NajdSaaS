@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import gsap from "gsap";
-import { Mail, Sparkles, Plug, Building2, LayoutDashboard } from "lucide-react";
+import { Mail, Lock, Sparkles, Plug, Building2, LayoutDashboard } from "lucide-react";
 import { HeroScene } from "@/components/three/HeroScene";
 import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -122,6 +122,7 @@ export default function Login() {
             <div>
               <label className="mb-1 block text-sm font-medium">{t("auth.password")}</label>
               <PasswordInput
+                icon={Lock}
                 required
                 autoComplete="current-password"
                 value={password}
