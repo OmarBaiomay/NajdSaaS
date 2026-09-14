@@ -48,6 +48,8 @@
     "loadError": "فشل تحميل البيانات — حاول إعادة اختبار المفتاح.",
     "chooseAccountHint": "اختر حسابًا أعلاه لتحميل الأرقام الفعلية.",
     "updatingData": "جارٍ تحديث البيانات…",
+    "showZeroMetrics": "إظهار {{count}} مقياسًا بلا بيانات",
+    "hideZeroMetrics": "إخفاء المقاييس بلا بيانات",
     "last30Days": "آخر 30 يومًا",
     "searchMetrics": "ابحث عن مقياس…",
     "breakdownOf": "{{name}} — توزيع الإكمال",

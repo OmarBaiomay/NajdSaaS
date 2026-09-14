@@ -189,6 +189,7 @@ export default function IntegrationDetail() {
   });
 
   const rows = queryResult?.rows;
+  const hasData = !!queryResult; // the query has resolved at least once (vs. the pre-account skeleton)
 
   const sortedRows = useMemo(
     () => (rows ?? []).slice().sort((a, b) => String(a[dimensionField]).localeCompare(String(b[dimensionField]))),
@@ -211,9 +212,18 @@ export default function IntegrationDetail() {
 
   // Metric families like "Video Plays at 25/50/75/100%" tell a much clearer
   // story as a donut than as four disconnected number cards — pull those out.
-  const { groups: donutGroups, ungrouped } = useMemo(
+  const { groups: allDonutGroups, ungrouped } = useMemo(
     () => groupMetricsByPercentTier(availableMetrics),
     [availableMetrics]
+  );
+  // Once real data is in, drop a breakdown entirely if every tier is zero —
+  // no point showing an empty donut. Before data loads, keep all of them
+  // (the skeleton state intentionally shows the full page shape).
+  const donutGroups = useMemo(
+    () =>
+      !hasData ? allDonutGroups : allDonutGroups.filter((g) => g.tiers.some((t) => totalFor(t.field.field_id) !== 0)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allDonutGroups, hasData, sortedRows]
   );
 
   const heroMetrics = useMemo(() => pickHeroMetrics(ungrouped, totalsById, HERO_COUNT), [ungrouped, totalsById]);
@@ -222,20 +232,43 @@ export default function IntegrationDetail() {
   // Related metrics namespaced as "<family>:<type>" (e.g. actions:link_click,
   // actions:purchase, actions:lead all under "actions") are far more useful
   // ranked together as a top-N breakdown than as dozens of flat cards.
-  const namespaceGroups = useMemo(() => groupMetricsByNamespace(ungrouped), [ungrouped]);
+  const allNamespaceGroups = useMemo(() => groupMetricsByNamespace(ungrouped), [ungrouped]);
+  const namespaceGroups = useMemo(
+    () =>
+      !hasData
+        ? allNamespaceGroups
+        : allNamespaceGroups.filter((g) => g.members.some((f) => totalFor(f.field_id) !== 0)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allNamespaceGroups, hasData, sortedRows]
+  );
   const namespaceGroupedIds = useMemo(
-    () => new Set(namespaceGroups.flatMap((g) => g.members.map((f) => f.field_id))),
-    [namespaceGroups]
+    () => new Set(allNamespaceGroups.flatMap((g) => g.members.map((f) => f.field_id))),
+    [allNamespaceGroups]
   );
 
   const restMetrics = useMemo(
     () => ungrouped.filter((f) => !heroIds.has(f.field_id) && !namespaceGroupedIds.has(f.field_id)),
     [ungrouped, heroIds, namespaceGroupedIds]
   );
-  const visibleMetrics = useMemo(
+
+  const [showZeroMetrics, setShowZeroMetrics] = useState(false);
+  const searchedMetrics = useMemo(
     () => restMetrics.filter((f) => f.field_name.toLowerCase().includes(metricSearch.trim().toLowerCase())),
     [restMetrics, metricSearch]
   );
+  // Hide metrics with no data at all by default — a page of fifty "0" cards
+  // for conversion types this account never uses isn't useful. Searching or
+  // toggling "show all" overrides that, since the user is looking for it on
+  // purpose then.
+  const isZero = (f: RnField) => (totalsById.get(f.field_id) ?? 0) === 0;
+  const visibleMetrics = useMemo(() => {
+    if (!hasData || showZeroMetrics || metricSearch.trim()) return searchedMetrics;
+    return searchedMetrics.filter((f) => !isZero(f));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchedMetrics, hasData, showZeroMetrics, metricSearch, totalsById]);
+  const hiddenZeroCount = hasData && !showZeroMetrics && !metricSearch.trim()
+    ? searchedMetrics.length - visibleMetrics.length
+    : 0;
 
   const chartOptions: SearchableOption[] = availableMetrics.map((f) => ({ value: f.field_id, label: f.field_name }));
   const effectiveChartMetric = chartMetric || fieldsData?.default_metric || heroMetrics[0]?.field_id || "";
@@ -244,6 +277,36 @@ export default function IntegrationDetail() {
     label: String(row[dimensionField]),
     value: Number(row[effectiveChartMetric]) || 0,
   }));
+
+  // Donuts and bar-list breakdowns share one grid so a single leftover group
+  // (e.g. only one "at N%" family on this account) doesn't leave a dead
+  // half-empty row — they just sit next to whatever else is available.
+  type BreakdownCard =
+    | { type: "donut"; key: string; title: string; subtitle?: string; slices: { label: string; value: number }[]; centerValue?: string; centerLabel?: string }
+    | { type: "bars"; key: string; title: string; items: { label: string; value: number }[] };
+
+  const breakdownCards: BreakdownCard[] = [
+    ...donutGroups.map((group): BreakdownCard => {
+      const baseTotal = group.baseField ? totalFor(group.baseField.field_id) : undefined;
+      return {
+        type: "donut",
+        key: group.key,
+        title: t("integrations.breakdownOf", { name: group.baseLabel }),
+        subtitle: baseTotal !== undefined ? t("integrations.ofTotal", { total: baseTotal.toLocaleString() }) : undefined,
+        slices: group.tiers.map((tier) => ({ label: `${tier.percent}%`, value: totalFor(tier.field.field_id) })),
+        centerValue: baseTotal?.toLocaleString(),
+        centerLabel: group.baseLabel,
+      };
+    }),
+    ...namespaceGroups.map(
+      (group): BreakdownCard => ({
+        type: "bars",
+        key: group.key,
+        title: t("integrations.topBreakdownOf", { name: group.label }),
+        items: group.members.map((f) => ({ label: f.field_name, value: totalFor(f.field_id) })),
+      })
+    ),
+  ];
 
   return (
     <div className="space-y-6">
@@ -349,67 +412,55 @@ export default function IntegrationDetail() {
             <RevenueChart data={primaryChartData} />
           </div>
 
-          {donutGroups.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {donutGroups.map((group) => {
-                const baseTotal = group.baseField ? totalFor(group.baseField.field_id) : undefined;
-                return (
-                  <div
-                    key={group.key}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
-                  >
-                    <h2 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                      {t("integrations.breakdownOf", { name: group.baseLabel })}
-                    </h2>
-                    {baseTotal !== undefined && (
-                      <p className="mb-2 text-xs text-slate-400">
-                        {t("integrations.ofTotal", { total: baseTotal.toLocaleString() })}
-                      </p>
-                    )}
-                    <MetricDonutChart
-                      slices={group.tiers.map((tier) => ({
-                        label: `${tier.percent}%`,
-                        value: totalFor(tier.field.field_id),
-                      }))}
-                      centerValue={baseTotal?.toLocaleString()}
-                      centerLabel={group.baseLabel}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {namespaceGroups.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {namespaceGroups.map((group) => (
+          {breakdownCards.length > 0 && (
+            <div className={`grid grid-cols-1 gap-4 ${breakdownCards.length > 1 ? "lg:grid-cols-2" : ""}`}>
+              {breakdownCards.map((card) => (
                 <div
-                  key={group.key}
+                  key={card.key}
                   className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
                 >
-                  <h2 className="mb-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                    {t("integrations.topBreakdownOf", { name: group.label })}
-                  </h2>
-                  <TopMetricsBarList
-                    items={group.members.map((f) => ({
-                      label: f.field_name,
-                      value: totalFor(f.field_id),
-                    }))}
-                    moreLabel={(count) => t("integrations.moreItems", { count })}
-                  />
+                  <h2 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">{card.title}</h2>
+                  {card.type === "donut" ? (
+                    <>
+                      {card.subtitle && <p className="mb-2 text-xs text-slate-400">{card.subtitle}</p>}
+                      <MetricDonutChart slices={card.slices} centerValue={card.centerValue} centerLabel={card.centerLabel} />
+                    </>
+                  ) : (
+                    <div className="mt-3">
+                      <TopMetricsBarList items={card.items} moreLabel={(count) => t("integrations.moreItems", { count })} />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          <div className="relative max-w-sm">
-            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={metricSearch}
-              onChange={(e) => setMetricSearch(e.target.value)}
-              placeholder={t("integrations.searchMetrics")}
-              className="w-full rounded-lg border border-slate-300 bg-transparent py-2 ps-9 pe-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative max-w-sm flex-1">
+              <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={metricSearch}
+                onChange={(e) => setMetricSearch(e.target.value)}
+                placeholder={t("integrations.searchMetrics")}
+                className="w-full rounded-lg border border-slate-300 bg-transparent py-2 ps-9 pe-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
+              />
+            </div>
+            {hiddenZeroCount > 0 && (
+              <button
+                onClick={() => setShowZeroMetrics(true)}
+                className="text-xs font-medium text-brand-600 hover:underline"
+              >
+                {t("integrations.showZeroMetrics", { count: hiddenZeroCount })}
+              </button>
+            )}
+            {showZeroMetrics && (
+              <button
+                onClick={() => setShowZeroMetrics(false)}
+                className="text-xs font-medium text-slate-400 hover:underline"
+              >
+                {t("integrations.hideZeroMetrics")}
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
