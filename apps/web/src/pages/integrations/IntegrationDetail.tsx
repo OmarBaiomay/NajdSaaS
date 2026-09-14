@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
+import { DateRangePicker, dateRangeLabel, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
@@ -107,6 +108,8 @@ export default function IntegrationDetail() {
   const [dataView, setDataView] = useState("");
   const [metricSearch, setMetricSearch] = useState("");
   const [chartMetric, setChartMetric] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE);
+  const dateRangeReady = dateRange.preset !== "custom" || (!!dateRange.start && !!dateRange.end);
 
   // Some integrations (Google Ads, Microsoft Ads, YouTube, LinkedIn…) require
   // a data_view on both /fields and /query — discover that up front.
@@ -162,7 +165,15 @@ export default function IntegrationDetail() {
     isFetching: queryLoading,
     error: queryError,
   } = useQuery({
-    queryKey: ["rn-query-all", integrationId, connectionKey, accountId, dataView, metricIds.join(",")],
+    queryKey: [
+      "rn-query-all",
+      integrationId,
+      connectionKey,
+      accountId,
+      dataView,
+      metricIds.join(","),
+      JSON.stringify(dateRange),
+    ],
     queryFn: async () => {
       const runOne = (fields: string[]) =>
         runQuery<Record<string, string | number>>({
@@ -172,7 +183,7 @@ export default function IntegrationDetail() {
           ...(dataView ? { data_view: dataView } : {}),
           ...(defaultSettings ? { settings: defaultSettings } : {}),
           fields: [dimensionField, ...fields],
-          date_range: { preset: "lastxdays", x: 30 },
+          date_range: dateRange as unknown as Record<string, unknown>,
           limit: 100,
         });
 
@@ -185,7 +196,7 @@ export default function IntegrationDetail() {
       }
       return result;
     },
-    enabled: dataViewReady && !!connectionKey && !!accountId && metricIds.length > 0,
+    enabled: dataViewReady && dateRangeReady && !!connectionKey && !!accountId && metricIds.length > 0,
   });
 
   const rows = queryResult?.rows;
@@ -400,16 +411,20 @@ export default function IntegrationDetail() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                {chartMetricField?.field_name ?? effectiveChartMetric} · {t("integrations.last30Days")}
+                {chartMetricField?.field_name ?? effectiveChartMetric} · {dateRangeLabel(dateRange, t)}
               </h2>
-              <SearchableSelect
-                value={effectiveChartMetric}
-                onChange={setChartMetric}
-                options={chartOptions}
-                className="w-56"
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
+                <SearchableSelect
+                  value={effectiveChartMetric}
+                  onChange={setChartMetric}
+                  options={chartOptions}
+                  className="w-56"
+                />
+              </div>
             </div>
             <RevenueChart data={primaryChartData} />
+            <p className="mt-2 text-xs text-slate-400">{t("integrations.dateRangeAppliesToAll")}</p>
           </div>
 
           {breakdownCards.length > 0 && (

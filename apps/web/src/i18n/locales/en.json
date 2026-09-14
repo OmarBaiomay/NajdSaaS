@@ -50,7 +50,7 @@
     "updatingData": "Updating data…",
     "showZeroMetrics": "Show {{count}} metrics with no data",
     "hideZeroMetrics": "Hide metrics with no data",
-    "last30Days": "last 30 days",
+    "dateRangeAppliesToAll": "This date range applies to every card and chart on this page.",
     "searchMetrics": "Search metrics…",
     "breakdownOf": "{{name}} — completion breakdown",
     "ofTotal": "of {{total}} total",
@@ -83,6 +83,18 @@
     "system": "System"
   },
   "language": { "en": "English", "ar": "Arabic" },
+  "dateRange": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "last7": "Last 7 days",
+    "last14": "Last 14 days",
+    "last30": "Last 30 days",
+    "last90": "Last 90 days",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisYear": "This year",
+    "custom": "Custom range"
+  },
   "common": {
     "select": "Select…",
     "search": "Search…",
