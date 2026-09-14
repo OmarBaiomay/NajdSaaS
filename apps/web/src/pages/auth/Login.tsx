@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import gsap from "gsap";
-import { Mail, Lock, Sparkles, Plug, Building2, LayoutDashboard } from "lucide-react";
+import { Mail, Lock, Sparkles, Plug, ShieldCheck, CalendarRange } from "lucide-react";
 import { HeroScene } from "@/components/three/HeroScene";
 import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -13,8 +13,8 @@ import { useAuthStore, isAgencyLevel } from "@/store/authStore";
 
 const FEATURES = [
   { icon: Plug, key: "auth.feature1" },
-  { icon: Building2, key: "auth.feature2" },
-  { icon: LayoutDashboard, key: "auth.feature3" },
+  { icon: ShieldCheck, key: "auth.feature2" },
+  { icon: CalendarRange, key: "auth.feature3" },
 ] as const;
 
 export default function Login() {

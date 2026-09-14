@@ -18,11 +18,11 @@
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "invalidCredentials": "Invalid email or password",
-    "brandHeadline": "Every tenant's data, one dashboard.",
-    "brandSubtext": "Connect your agency's Reporting Ninja account and give every tenant a secure, real-time view of their own numbers.",
+    "brandHeadline": "All your marketing performance, in one place.",
+    "brandSubtext": "See live, real numbers from every ad account and platform you run — no more logging into five different tools to check how things are going.",
     "feature1": "Live metrics from every connected integration",
-    "feature2": "Each tenant gets an isolated, secure workspace",
-    "feature3": "Switch between agency and tenant views instantly"
+    "feature2": "Your data is private and secure — always",
+    "feature3": "Track any date range, from today to a custom period"
   },
   "dashboard": {
     "agencyOverview": "Agency Overview",
