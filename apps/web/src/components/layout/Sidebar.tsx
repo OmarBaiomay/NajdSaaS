@@ -23,7 +23,7 @@ export function Sidebar({
   const { t } = useTranslation();
 
   return (
-    <aside className="hidden w-64 shrink-0 border-e border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 md:block">
+    <aside className="hidden w-64 shrink-0 overflow-y-auto border-e border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 md:block">
       <div className="flex h-16 items-center px-5">
         <span className="text-lg font-bold text-brand-600">{t("app.name")}</span>
       </div>

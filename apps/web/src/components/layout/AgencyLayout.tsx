@@ -22,11 +22,11 @@ export function AgencyLayout() {
   const title = tenantId ? `${t("viewAs.viewingAs")}: ${tenantName}` : t("dashboard.agencyOverview");
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
       <Sidebar items={nav} scopeLabel={t("viewAs.agency")} header={<ViewAsSwitcher />} />
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title={title} />
-        <main className="flex-1 p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
