@@ -27,7 +27,7 @@ export function groupMetricsByNamespace(
   opts?: { minMembers?: number; maxGroups?: number }
 ): NamespaceGroup[] {
   const minMembers = opts?.minMembers ?? 3;
-  const maxGroups = opts?.maxGroups ?? 4;
+  const maxGroups = opts?.maxGroups ?? 5;
 
   const byPrefix = new Map<string, RnField[]>();
   for (const field of fields) {

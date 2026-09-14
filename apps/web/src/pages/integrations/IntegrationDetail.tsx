@@ -452,10 +452,14 @@ export default function IntegrationDetail() {
 
           {breakdownCards.length > 0 && (
             <div className={`grid grid-cols-1 gap-4 ${breakdownCards.length > 1 ? "lg:grid-cols-2" : ""}`}>
-              {breakdownCards.map((card) => (
+              {breakdownCards.map((card, i) => (
                 <div
                   key={card.key}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+                  className={`rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 ${
+                    // An odd one out left alone on the last row spans full width
+                    // instead of leaving a dead empty cell beside it.
+                    breakdownCards.length % 2 === 1 && i === breakdownCards.length - 1 ? "lg:col-span-2" : ""
+                  }`}
                 >
                   <h2 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">{card.title}</h2>
                   {card.type === "donut" ? (
