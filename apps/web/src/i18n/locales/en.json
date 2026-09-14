@@ -58,6 +58,8 @@
     "noAccountsLinked": "No accounts linked",
     "account": "Account",
     "dataView": "Data view",
+    "dateRange": "Date range",
+    "chartMetric": "Chart metric",
     "selectDataView": "Select a data view above to continue.",
     "addMetric": "Add metric",
     "noAccounts": "No connected accounts found for this integration in your Reporting Ninja account.",

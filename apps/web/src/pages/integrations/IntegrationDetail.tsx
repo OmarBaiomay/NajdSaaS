@@ -366,10 +366,11 @@ export default function IntegrationDetail() {
           <h1 className="text-lg font-semibold capitalize">{integrationId.replace(/_/g, " ")}</h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-end gap-3">
           {needsDataView && (
             <SearchableSelect
-              placeholder={t("integrations.dataView")}
+              label={t("integrations.dataView")}
+              placeholder={t("common.select")}
               value={dataView}
               onChange={setDataView}
               options={dataViewOptions}
@@ -377,10 +378,19 @@ export default function IntegrationDetail() {
             />
           )}
           <SearchableSelect
-            placeholder={connectionsLoading ? t("common.loading") : t("integrations.account")}
+            label={t("integrations.account")}
+            placeholder={connectionsLoading ? t("common.loading") : t("common.select")}
             value={accountId ? `${connectionKey}::${accountId}` : ""}
             onChange={(v) => selectAccount(v)}
             options={accountOptions}
+            className="w-56"
+          />
+          <DateRangePicker label={t("integrations.dateRange")} value={dateRange} onChange={setDateRange} />
+          <SearchableSelect
+            label={t("integrations.chartMetric")}
+            value={effectiveChartMetric}
+            onChange={setChartMetric}
+            options={chartOptions}
             className="w-56"
           />
         </div>
@@ -434,20 +444,9 @@ export default function IntegrationDetail() {
           )}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                {chartMetricField?.field_name ?? effectiveChartMetric} · {dateRangeLabel(dateRange, t)}
-              </h2>
-              <div className="flex flex-wrap items-center gap-2">
-                <DateRangePicker value={dateRange} onChange={setDateRange} />
-                <SearchableSelect
-                  value={effectiveChartMetric}
-                  onChange={setChartMetric}
-                  options={chartOptions}
-                  className="w-56"
-                />
-              </div>
-            </div>
+            <h2 className="mb-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              {chartMetricField?.field_name ?? effectiveChartMetric} · {dateRangeLabel(dateRange, t)}
+            </h2>
             <RevenueChart data={primaryChartData} />
             <p className="mt-2 text-xs text-slate-400">{t("integrations.dateRangeAppliesToAll")}</p>
           </div>

@@ -49,49 +49,54 @@ export function dateRangeLabel(value: DateRangeValue, t: (key: string) => string
 export function DateRangePicker({
   value,
   onChange,
+  label,
 }: {
   value: DateRangeValue;
   onChange: (value: DateRangeValue) => void;
+  label?: string;
 }) {
   const { t } = useTranslation();
   const selectedId = idForValue(value);
   const options: SearchableOption[] = PRESETS.map((p) => ({ value: p.id, label: t(p.labelKey) }));
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <SearchableSelect
-        value={selectedId}
-        onChange={(id) => {
-          if (id === "custom") {
-            const today = new Date().toISOString().slice(0, 10);
-            onChange({ preset: "custom", start: value.start ?? today, end: value.end ?? today });
-            return;
-          }
-          const preset = PRESETS.find((p) => p.id === id);
-          if (preset?.range) onChange(preset.range);
-        }}
-        options={options}
-        className="w-40"
-      />
-      {selectedId === "custom" && (
-        <div className="flex items-center gap-1.5">
-          <input
-            type="date"
-            value={value.start ?? ""}
-            max={value.end}
-            onChange={(e) => onChange({ preset: "custom", start: e.target.value, end: value.end })}
-            className="rounded-lg border border-slate-300 bg-transparent px-2 py-1.5 text-xs outline-none focus:border-brand-500 dark:border-slate-700"
-          />
-          <span className="text-xs text-slate-400">–</span>
-          <input
-            type="date"
-            value={value.end ?? ""}
-            min={value.start}
-            onChange={(e) => onChange({ preset: "custom", start: value.start, end: e.target.value })}
-            className="rounded-lg border border-slate-300 bg-transparent px-2 py-1.5 text-xs outline-none focus:border-brand-500 dark:border-slate-700"
-          />
-        </div>
-      )}
+    <div>
+      {label && <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-slate-500">{label}</label>}
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchableSelect
+          value={selectedId}
+          onChange={(id) => {
+            if (id === "custom") {
+              const today = new Date().toISOString().slice(0, 10);
+              onChange({ preset: "custom", start: value.start ?? today, end: value.end ?? today });
+              return;
+            }
+            const preset = PRESETS.find((p) => p.id === id);
+            if (preset?.range) onChange(preset.range);
+          }}
+          options={options}
+          className="w-40"
+        />
+        {selectedId === "custom" && (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={value.start ?? ""}
+              max={value.end}
+              onChange={(e) => onChange({ preset: "custom", start: e.target.value, end: value.end })}
+              className="rounded-lg border border-slate-300 bg-transparent px-2 py-1.5 text-xs outline-none focus:border-brand-500 dark:border-slate-700"
+            />
+            <span className="text-xs text-slate-400">–</span>
+            <input
+              type="date"
+              value={value.end ?? ""}
+              min={value.start}
+              onChange={(e) => onChange({ preset: "custom", start: value.start, end: e.target.value })}
+              className="rounded-lg border border-slate-300 bg-transparent px-2 py-1.5 text-xs outline-none focus:border-brand-500 dark:border-slate-700"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

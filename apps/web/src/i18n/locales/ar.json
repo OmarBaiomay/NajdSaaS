@@ -62,6 +62,8 @@
     "noAccountsLinked": "لا حسابات مرتبطة",
     "account": "الحساب",
     "dataView": "طريقة العرض",
+    "dateRange": "النطاق الزمني",
+    "chartMetric": "مقياس الرسم البياني",
     "selectDataView": "اختر طريقة عرض البيانات أعلاه للمتابعة.",
     "addMetric": "إضافة مقياس",
     "noAccounts": "لا توجد حسابات مرتبطة بهذا التكامل في حساب Reporting Ninja الخاص بك.",
