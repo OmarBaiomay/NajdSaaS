@@ -117,6 +117,40 @@
     "select": "Select…",
     "search": "Search…",
     "noResults": "No results",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "users": {
+    "addUser": "Add user",
+    "createUser": "Create user",
+    "creating": "Creating…",
+    "createFailed": "Could not create the user",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "noUsers": "No users yet.",
+    "you": "you",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "role": {
+      "label": "Role",
+      "SUPER_ADMIN": "Super Admin",
+      "AGENCY_OWNER": "Agency Owner",
+      "AGENCY_STAFF": "Agency Staff",
+      "TENANT_OWNER": "Tenant Owner",
+      "TENANT_MEMBER": "Tenant Member"
+    }
+  },
+  "agencySettings": {
+    "title": "Agency profile",
+    "subtitle": "Basic information about your agency.",
+    "name": "Agency name",
+    "slug": "Slug",
+    "slugHint": "Slugs can't be changed here.",
+    "locale": "Default language",
+    "saved": "Saved.",
+    "saveFailed": "Could not save changes"
   }
 }

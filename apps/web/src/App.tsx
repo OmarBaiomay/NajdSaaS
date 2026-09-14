@@ -6,7 +6,8 @@ import TenantDashboard from "@/pages/tenant/Dashboard";
 import IntegrationsOverview from "@/pages/integrations/IntegrationsOverview";
 import IntegrationDetail from "@/pages/integrations/IntegrationDetail";
 import IntegrationSettings from "@/pages/tenant/IntegrationSettings";
-import Placeholder from "@/pages/Placeholder";
+import AgencySettings from "@/pages/agency/Settings";
+import Users from "@/pages/shared/Users";
 import { AgencyLayout } from "@/components/layout/AgencyLayout";
 import { TenantLayout } from "@/components/layout/TenantLayout";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
@@ -30,8 +31,8 @@ export default function App() {
           <Route element={<AgencyLayout />}>
             <Route path="/agency" element={<AgencyDashboard />} />
             <Route path="/agency/tenants" element={<Tenants />} />
-            <Route path="/agency/users" element={<Placeholder title="Users" />} />
-            <Route path="/agency/settings" element={<Placeholder title="Settings" />} />
+            <Route path="/agency/users" element={<Users />} />
+            <Route path="/agency/settings" element={<AgencySettings />} />
 
             <Route element={<AgencyTenantGate />}>
               <Route path="/agency/integrations" element={<IntegrationsOverview />} />
@@ -46,7 +47,7 @@ export default function App() {
             <Route path="/tenant" element={<TenantDashboard />} />
             <Route path="/tenant/integrations" element={<IntegrationsOverview />} />
             <Route path="/tenant/integrations/:integrationId" element={<IntegrationDetailRoute />} />
-            <Route path="/tenant/users" element={<Placeholder title="Users" />} />
+            <Route path="/tenant/users" element={<Users />} />
             <Route path="/tenant/settings" element={<IntegrationSettings />} />
           </Route>
         </Route>

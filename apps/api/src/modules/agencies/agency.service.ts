@@ -10,6 +10,14 @@ export async function getMyAgency(agencyId: string) {
   return agency;
 }
 
+export async function updateMyAgency(agencyId: string, patch: { name?: string; locale?: string }) {
+  return prisma.agency.update({
+    where: { id: agencyId },
+    data: patch,
+    include: { _count: { select: { tenants: true, users: true } } },
+  });
+}
+
 /** SUPER_ADMIN only: list every agency on the platform. */
 export async function listAllAgencies() {
   return prisma.agency.findMany({

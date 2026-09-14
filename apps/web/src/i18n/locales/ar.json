@@ -125,6 +125,40 @@
     "select": "اختر…",
     "search": "ابحث…",
     "noResults": "لا توجد نتائج",
-    "loading": "جارٍ التحميل…"
+    "loading": "جارٍ التحميل…",
+    "cancel": "إلغاء",
+    "save": "حفظ"
+  },
+  "users": {
+    "addUser": "إضافة مستخدم",
+    "createUser": "إنشاء مستخدم",
+    "creating": "جارٍ الإنشاء…",
+    "createFailed": "تعذّر إنشاء المستخدم",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "noUsers": "لا يوجد مستخدمون بعد.",
+    "you": "أنت",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "activate": "تفعيل",
+    "deactivate": "إيقاف",
+    "role": {
+      "label": "الدور",
+      "SUPER_ADMIN": "مشرف عام",
+      "AGENCY_OWNER": "مالك الوكالة",
+      "AGENCY_STAFF": "موظف الوكالة",
+      "TENANT_OWNER": "مالك الحساب الفرعي",
+      "TENANT_MEMBER": "عضو الحساب الفرعي"
+    }
+  },
+  "agencySettings": {
+    "title": "ملف الوكالة",
+    "subtitle": "معلومات أساسية عن وكالتك.",
+    "name": "اسم الوكالة",
+    "slug": "المعرّف",
+    "slugHint": "لا يمكن تغيير المعرّف من هنا.",
+    "locale": "اللغة الافتراضية",
+    "saved": "تم الحفظ.",
+    "saveFailed": "تعذّر حفظ التغييرات"
   }
 }
