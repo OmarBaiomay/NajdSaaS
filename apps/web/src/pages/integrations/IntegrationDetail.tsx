@@ -10,9 +10,11 @@ import { SearchableSelect, type SearchableOption } from "@/components/ui/Searcha
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
+import { TopMetricsBarList } from "@/components/charts/TopMetricsBarList";
 import { getIntegrationDetail, listConnections, listFields, runQuery, type RnField } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 import { groupMetricsByPercentTier } from "@/lib/metricGrouping";
+import { groupMetricsByNamespace } from "@/lib/metricNamespaceGrouping";
 import { getMetricVisual, pickSimplestMatch, HERO_PRIORITY } from "@/lib/metricVisuals";
 import { pickTimeDimension } from "@/lib/timeDimension";
 
@@ -217,7 +219,19 @@ export default function IntegrationDetail() {
   const heroMetrics = useMemo(() => pickHeroMetrics(ungrouped, totalsById, HERO_COUNT), [ungrouped, totalsById]);
   const heroIds = useMemo(() => new Set(heroMetrics.map((f) => f.field_id)), [heroMetrics]);
 
-  const restMetrics = useMemo(() => ungrouped.filter((f) => !heroIds.has(f.field_id)), [ungrouped, heroIds]);
+  // Related metrics namespaced as "<family>:<type>" (e.g. actions:link_click,
+  // actions:purchase, actions:lead all under "actions") are far more useful
+  // ranked together as a top-N breakdown than as dozens of flat cards.
+  const namespaceGroups = useMemo(() => groupMetricsByNamespace(ungrouped), [ungrouped]);
+  const namespaceGroupedIds = useMemo(
+    () => new Set(namespaceGroups.flatMap((g) => g.members.map((f) => f.field_id))),
+    [namespaceGroups]
+  );
+
+  const restMetrics = useMemo(
+    () => ungrouped.filter((f) => !heroIds.has(f.field_id) && !namespaceGroupedIds.has(f.field_id)),
+    [ungrouped, heroIds, namespaceGroupedIds]
+  );
   const visibleMetrics = useMemo(
     () => restMetrics.filter((f) => f.field_name.toLowerCase().includes(metricSearch.trim().toLowerCase())),
     [restMetrics, metricSearch]
@@ -357,6 +371,28 @@ export default function IntegrationDetail() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {namespaceGroups.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {namespaceGroups.map((group) => (
+                <div
+                  key={group.key}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <h2 className="mb-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    {t("integrations.topBreakdownOf", { name: group.label })}
+                  </h2>
+                  <TopMetricsBarList
+                    items={group.members.map((f) => ({
+                      label: f.field_name,
+                      value: totalFor(f.field_id),
+                    }))}
+                    moreLabel={(count) => t("integrations.moreItems", { count })}
+                  />
+                </div>
+              ))}
             </div>
           )}
 

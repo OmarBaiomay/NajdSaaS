@@ -50,6 +50,8 @@
     "searchMetrics": "Search metrics…",
     "breakdownOf": "{{name}} — completion breakdown",
     "ofTotal": "of {{total}} total",
+    "topBreakdownOf": "{{name}} — top breakdown",
+    "moreItems": "+{{count}} more",
     "someMetricsUnavailable": "{{count}} metric was unavailable for this account and is hidden.",
     "someMetricsUnavailable_other": "{{count}} metrics were unavailable for this account and are hidden."
   },
