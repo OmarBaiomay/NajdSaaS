@@ -13,6 +13,7 @@ export function GlowCard({
   icon,
   accent = "brand",
   className,
+  footer,
 }: {
   label: string;
   value: ReactNode;
@@ -20,6 +21,7 @@ export function GlowCard({
   icon?: ReactNode;
   accent?: "brand" | "violet" | "teal" | "amber";
   className?: string;
+  footer?: ReactNode;
 }) {
   const accents: Record<string, string> = {
     brand: "from-brand-500/60 via-brand-400/10 to-transparent",
@@ -48,6 +50,7 @@ export function GlowCard({
             {delta.positive ? "▲" : "▼"} {delta.value}
           </p>
         )}
+        {footer && <div className="mt-2 -mx-1">{footer}</div>}
       </div>
     </div>
   );

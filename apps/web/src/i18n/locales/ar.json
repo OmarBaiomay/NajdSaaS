@@ -46,7 +46,14 @@
     "addMetric": "إضافة مقياس",
     "noAccounts": "لا توجد حسابات مرتبطة بهذا التكامل في حساب Reporting Ninja الخاص بك.",
     "loadError": "فشل تحميل البيانات — حاول إعادة اختبار المفتاح.",
-    "last30Days": "آخر 30 يومًا"
+    "last30Days": "آخر 30 يومًا",
+    "searchMetrics": "ابحث عن مقياس…",
+    "someMetricsUnavailable_zero": "جميع المقاييس متاحة لهذا الحساب.",
+    "someMetricsUnavailable_one": "مقياس واحد غير متاح لهذا الحساب وتم إخفاؤه.",
+    "someMetricsUnavailable_two": "مقياسان غير متاحين لهذا الحساب وتم إخفاؤهما.",
+    "someMetricsUnavailable_few": "{{count}} مقاييس غير متاحة لهذا الحساب وتم إخفاؤها.",
+    "someMetricsUnavailable_many": "{{count}} مقياسًا غير متاح لهذا الحساب وتم إخفاؤها.",
+    "someMetricsUnavailable_other": "{{count}} مقياس غير متاح لهذا الحساب وتم إخفاؤها."
   },
   "settings": {
     "reportingNinjaTitle": "Reporting Ninja",

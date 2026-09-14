@@ -2,15 +2,59 @@ import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
 import { RevenueChart } from "@/components/charts/RevenueChart";
+import { Sparkline } from "@/components/charts/Sparkline";
 import { getIntegrationDetail, listConnections, listFields, runQuery } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 
 const ACCENTS = ["brand", "violet", "teal", "amber"] as const;
+
+// Some providers (Google Ads in particular) reject a query that mixes
+// metrics from incompatible resource categories in one request. Rather than
+// ask the user to pick metrics, we request them all at once and, if the
+// provider rejects the combination, bisect the field list and retry each
+// half in parallel — recursing only into the half(s) that actually fail.
+// This isolates the handful of genuinely incompatible fields (usually a
+// few percent) while fetching the rest in as few round trips as possible.
+const MAX_QUERY_CALLS = 120;
+
+interface BisectResult {
+  rows: Record<string, string | number>[];
+  unavailable: string[];
+}
+
+async function fetchMetricsBisecting(
+  fields: string[],
+  runOne: (fields: string[]) => Promise<Record<string, string | number>[]>,
+  dimensionField: string,
+  callBudget: { remaining: number }
+): Promise<BisectResult> {
+  if (fields.length === 0) return { rows: [], unavailable: [] };
+  if (callBudget.remaining <= 0) return { rows: [], unavailable: fields };
+  callBudget.remaining -= 1;
+
+  try {
+    const rows = await runOne(fields);
+    return { rows, unavailable: [] };
+  } catch {
+    if (fields.length === 1) return { rows: [], unavailable: fields };
+    const mid = Math.ceil(fields.length / 2);
+    const [a, b] = await Promise.all([
+      fetchMetricsBisecting(fields.slice(0, mid), runOne, dimensionField, callBudget),
+      fetchMetricsBisecting(fields.slice(mid), runOne, dimensionField, callBudget),
+    ]);
+    const merged = new Map<string, Record<string, string | number>>();
+    for (const row of [...a.rows, ...b.rows]) {
+      const key = String(row[dimensionField]);
+      merged.set(key, { ...merged.get(key), ...row });
+    }
+    return { rows: Array.from(merged.values()), unavailable: [...a.unavailable, ...b.unavailable] };
+  }
+}
 
 export default function IntegrationDetail() {
   const { integrationId = "" } = useParams<{ integrationId: string }>();
@@ -20,7 +64,7 @@ export default function IntegrationDetail() {
   const [connectionKey, setConnectionKey] = useState("");
   const [accountId, setAccountId] = useState("");
   const [dataView, setDataView] = useState("");
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
+  const [metricSearch, setMetricSearch] = useState("");
 
   // Some integrations (Google Ads, Microsoft Ads, YouTube, LinkedIn…) require
   // a data_view on both /fields and /query — discover that up front.
@@ -63,43 +107,61 @@ export default function IntegrationDetail() {
 
   const metricFields = useMemo(() => fieldsData?.fields.filter((f) => f.dim_met === "metric") ?? [], [fieldsData]);
   const dimensionField = fieldsData?.default_dimension ?? "day";
-
-  const activeMetrics =
-    selectedMetrics.length > 0 ? selectedMetrics : metricFields.slice(0, 4).map((f) => f.field_id);
-
-  const metricOptions: SearchableOption[] = metricFields
-    .filter((f) => !activeMetrics.includes(f.field_id))
-    .map((f) => ({ value: f.field_id, label: f.field_name, description: f.field_description || undefined }));
+  const metricIds = useMemo(() => metricFields.map((f) => f.field_id), [metricFields]);
 
   const {
-    data: rows,
+    data: queryResult,
     isFetching: queryLoading,
     error: queryError,
   } = useQuery({
-    queryKey: ["rn-query", integrationId, connectionKey, accountId, dataView, activeMetrics.join(",")],
-    queryFn: () =>
-      runQuery<Record<string, string | number>>({
-        integration_id: integrationId,
-        connection_key: connectionKey,
-        account_id: accountId,
-        ...(dataView ? { data_view: dataView } : {}),
-        ...(defaultSettings ? { settings: defaultSettings } : {}),
-        fields: [dimensionField, ...activeMetrics],
-        date_range: { preset: "lastxdays", x: 30 },
-        limit: 100,
-      }),
-    enabled: dataViewReady && !!connectionKey && !!accountId && activeMetrics.length > 0,
+    queryKey: ["rn-query-all", integrationId, connectionKey, accountId, dataView, metricIds.join(",")],
+    queryFn: async () => {
+      const runOne = (fields: string[]) =>
+        runQuery<Record<string, string | number>>({
+          integration_id: integrationId,
+          connection_key: connectionKey,
+          account_id: accountId,
+          ...(dataView ? { data_view: dataView } : {}),
+          ...(defaultSettings ? { settings: defaultSettings } : {}),
+          fields: [dimensionField, ...fields],
+          date_range: { preset: "lastxdays", x: 30 },
+          limit: 100,
+        });
+
+      const result = await fetchMetricsBisecting(metricIds, runOne, dimensionField, {
+        remaining: MAX_QUERY_CALLS,
+      });
+
+      if (result.rows.length === 0 && result.unavailable.length === metricIds.length) {
+        throw new Error("Query failed for every metric");
+      }
+      return result;
+    },
+    enabled: dataViewReady && !!connectionKey && !!accountId && metricIds.length > 0,
   });
 
-  const totals = activeMetrics.reduce<Record<string, number>>((acc, metric) => {
-    acc[metric] = (rows ?? []).reduce((sum, row) => sum + (Number(row[metric]) || 0), 0);
-    return acc;
-  }, {});
+  const rows = queryResult?.rows;
 
-  const chartData = (rows ?? [])
-    .slice()
-    .sort((a, b) => String(a[dimensionField]).localeCompare(String(b[dimensionField])))
-    .map((row) => ({ label: String(row[dimensionField]), value: Number(row[activeMetrics[0]]) || 0 }));
+  const sortedRows = useMemo(
+    () => (rows ?? []).slice().sort((a, b) => String(a[dimensionField]).localeCompare(String(b[dimensionField]))),
+    [rows, dimensionField]
+  );
+
+  const visibleMetrics = useMemo(
+    () =>
+      metricFields.filter(
+        (f) =>
+          !queryResult?.unavailable.includes(f.field_id) &&
+          f.field_name.toLowerCase().includes(metricSearch.trim().toLowerCase())
+      ),
+    [metricFields, queryResult, metricSearch]
+  );
+
+  const primaryMetric = fieldsData?.default_metric ?? visibleMetrics[0]?.field_id;
+  const primaryChartData = sortedRows.map((row) => ({
+    label: String(row[dimensionField]),
+    value: Number(row[primaryMetric ?? ""]) || 0,
+  }));
 
   return (
     <div className="space-y-6">
@@ -118,16 +180,13 @@ export default function IntegrationDetail() {
       </div>
 
       <Card>
-        <div className={`grid grid-cols-1 gap-4 ${needsDataView ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        <div className={`grid grid-cols-1 gap-4 ${needsDataView ? "sm:grid-cols-2" : "sm:grid-cols-1 sm:max-w-sm"}`}>
           {needsDataView && (
             <SearchableSelect
               label={t("integrations.dataView")}
               placeholder={t("common.select")}
               value={dataView}
-              onChange={(v) => {
-                setDataView(v);
-                setSelectedMetrics([]);
-              }}
+              onChange={setDataView}
               options={dataViewOptions}
             />
           )}
@@ -143,38 +202,7 @@ export default function IntegrationDetail() {
             }}
             options={accountOptions}
           />
-
-          <SearchableSelect
-            label={t("integrations.addMetric")}
-            placeholder={t("integrations.addMetric")}
-            value=""
-            onChange={(metric) => setSelectedMetrics((prev) => [...prev, metric])}
-            options={metricOptions}
-            disabled={!dataViewReady}
-          />
         </div>
-
-        {activeMetrics.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {activeMetrics.map((metric) => {
-              const field = metricFields.find((f) => f.field_id === metric);
-              return (
-                <span
-                  key={metric}
-                  className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300"
-                >
-                  {field?.field_name ?? metric}
-                  <button
-                    onClick={() => setSelectedMetrics(activeMetrics.filter((m) => m !== metric))}
-                    className="text-brand-500 hover:text-brand-800 dark:hover:text-brand-100"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        )}
       </Card>
 
       {needsDataView && !dataView && (
@@ -190,27 +218,51 @@ export default function IntegrationDetail() {
 
       {rows && (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {activeMetrics.map((metric, i) => {
-              const field = metricFields.find((f) => f.field_id === metric);
+          {(queryResult?.unavailable.length ?? 0) > 0 && (
+            <p className="text-xs text-slate-400">
+              {t("integrations.someMetricsUnavailable", { count: queryResult!.unavailable.length })}
+            </p>
+          )}
+
+          {primaryMetric && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                {metricFields.find((f) => f.field_id === primaryMetric)?.field_name ?? primaryMetric} ·{" "}
+                {t("integrations.last30Days")}
+              </h2>
+              <RevenueChart data={primaryChartData} />
+            </div>
+          )}
+
+          <div className="relative max-w-sm">
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={metricSearch}
+              onChange={(e) => setMetricSearch(e.target.value)}
+              placeholder={t("integrations.searchMetrics")}
+              className="w-full rounded-lg border border-slate-300 bg-transparent py-2 ps-9 pe-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleMetrics.map((field, i) => {
+              const series = sortedRows.map((row) => Number(row[field.field_id]) || 0);
+              const total = series.reduce((sum, v) => sum + v, 0);
               return (
                 <GlowCard
-                  key={metric}
-                  label={field?.field_name ?? metric}
-                  value={totals[metric]?.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  key={field.field_id}
+                  label={field.field_name}
+                  value={total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   accent={ACCENTS[i % ACCENTS.length]}
+                  footer={series.some((v) => v !== 0) ? <Sparkline data={series} /> : undefined}
                 />
               );
             })}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="mb-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              {metricFields.find((f) => f.field_id === activeMetrics[0])?.field_name ?? activeMetrics[0]} ·{" "}
-              {t("integrations.last30Days")}
-            </h2>
-            <RevenueChart data={chartData} />
-          </div>
+          {visibleMetrics.length === 0 && (
+            <Card className="text-center text-sm text-slate-500">{t("common.noResults")}</Card>
+          )}
         </>
       )}
     </div>
