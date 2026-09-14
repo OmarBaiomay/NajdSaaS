@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,9 @@ import { groupMetricsByPercentTier } from "@/lib/metricGrouping";
 import { groupMetricsByNamespace } from "@/lib/metricNamespaceGrouping";
 import { getMetricVisual, pickSimplestMatch, HERO_PRIORITY } from "@/lib/metricVisuals";
 import { pickTimeDimension } from "@/lib/timeDimension";
+import { getDefaultAccount, setDefaultAccount } from "@/lib/defaultAccounts";
+import { useAuthStore } from "@/store/authStore";
+import { useViewAsStore } from "@/store/viewAsStore";
 
 const GRID_ACCENTS = ["brand", "violet", "teal", "amber", "sky", "indigo", "emerald", "orange", "pink", "rose"] as const;
 const HERO_COUNT = 5;
@@ -106,6 +109,20 @@ export default function IntegrationDetail() {
   const [connectionKey, setConnectionKey] = useState("");
   const [accountId, setAccountId] = useState("");
   const [dataView, setDataView] = useState("");
+
+  // Scoped per tenant so an agency user browsing different tenants via
+  // "View as" never leaks one tenant's default account into another's.
+  const authTenantId = useAuthStore((s) => s.user?.tenantId);
+  const viewAsTenantId = useViewAsStore((s) => s.tenantId);
+  const accountScope = viewAsTenantId ?? authTenantId ?? "self";
+
+  const selectAccount = (value: string, remember = true) => {
+    const [ck, aid] = value.split("::");
+    setConnectionKey(ck ?? "");
+    setAccountId(aid ?? "");
+    if (remember && ck && aid) setDefaultAccount(accountScope, integrationId, value);
+  };
+
   const [metricSearch, setMetricSearch] = useState("");
   const [chartMetric, setChartMetric] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE);
@@ -143,6 +160,17 @@ export default function IntegrationDetail() {
         description: c.connection_name !== a.account_name ? c.connection_name : undefined,
       }))
     ) ?? [];
+
+  // Auto-select the account remembered from last time this integration was
+  // opened (scoped per tenant), once the account list has loaded.
+  useEffect(() => {
+    if (accountId || accountOptions.length === 0) return;
+    const saved = getDefaultAccount(accountScope, integrationId);
+    if (saved && accountOptions.some((o) => o.value === saved)) {
+      selectAccount(saved, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountOptions, accountScope, integrationId]);
 
   const { data: fieldsData } = useQuery({
     queryKey: ["rn-fields", integrationId, dataView],
@@ -321,45 +349,40 @@ export default function IntegrationDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          to=".."
-          relative="path"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-        <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${visual.bg} ${visual.color}`}>
-          {visual.icon}
-        </span>
-        <h1 className="text-lg font-semibold capitalize">{integrationId.replace(/_/g, " ")}</h1>
-      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            to=".."
+            relative="path"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <ArrowLeft size={18} />
+          </Link>
+          <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${visual.bg} ${visual.color}`}>
+            {visual.icon}
+          </span>
+          <h1 className="text-lg font-semibold capitalize">{integrationId.replace(/_/g, " ")}</h1>
+        </div>
 
-      <Card>
-        <div className={`grid grid-cols-1 gap-4 ${needsDataView ? "sm:grid-cols-2" : "sm:grid-cols-1 sm:max-w-sm"}`}>
+        <div className="flex flex-wrap items-center gap-2">
           {needsDataView && (
             <SearchableSelect
-              label={t("integrations.dataView")}
-              placeholder={t("common.select")}
+              placeholder={t("integrations.dataView")}
               value={dataView}
               onChange={setDataView}
               options={dataViewOptions}
+              className="w-44"
             />
           )}
-
           <SearchableSelect
-            label={t("integrations.account")}
-            placeholder={connectionsLoading ? t("common.loading") : t("common.select")}
+            placeholder={connectionsLoading ? t("common.loading") : t("integrations.account")}
             value={accountId ? `${connectionKey}::${accountId}` : ""}
-            onChange={(v) => {
-              const [ck, aid] = v.split("::");
-              setConnectionKey(ck ?? "");
-              setAccountId(aid ?? "");
-            }}
+            onChange={(v) => selectAccount(v)}
             options={accountOptions}
+            className="w-56"
           />
         </div>
-      </Card>
+      </div>
 
       {needsDataView && !dataView && (
         <Card className="text-center text-sm text-slate-500">{t("integrations.selectDataView")}</Card>
