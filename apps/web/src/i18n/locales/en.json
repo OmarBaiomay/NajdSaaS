@@ -46,6 +46,8 @@
     "addMetric": "Add metric",
     "noAccounts": "No connected accounts found for this integration in your Reporting Ninja account.",
     "loadError": "Failed to load data — try re-testing your key.",
+    "chooseAccountHint": "Choose an account above to load live numbers.",
+    "updatingData": "Updating data…",
     "last30Days": "last 30 days",
     "searchMetrics": "Search metrics…",
     "breakdownOf": "{{name}} — completion breakdown",

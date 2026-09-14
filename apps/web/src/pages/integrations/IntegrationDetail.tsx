@@ -296,11 +296,17 @@ export default function IntegrationDetail() {
       )}
 
       {queryError && <p className="text-sm text-red-500">{t("integrations.loadError")}</p>}
-      {queryLoading && <p className="text-sm text-slate-400">{t("common.loading")}</p>}
 
-      {rows && (
+      {/* The whole layout renders as soon as we know the field catalog (no
+          account needed for that) — values just sit at 0 until an account is
+          chosen, then update in place once the query resolves. */}
+      {metricFields.length > 0 && (
         <>
-          {(queryResult?.unavailable.length ?? 0) > 0 && (
+          {!accountId && (
+            <p className="text-xs text-slate-400">{t("integrations.chooseAccountHint")}</p>
+          )}
+          {queryLoading && <p className="text-xs text-slate-400">{t("integrations.updatingData")}</p>}
+          {!queryLoading && (queryResult?.unavailable.length ?? 0) > 0 && (
             <p className="text-xs text-slate-400">
               {t("integrations.someMetricsUnavailable", { count: queryResult!.unavailable.length })}
             </p>
