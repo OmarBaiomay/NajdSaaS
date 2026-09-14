@@ -10,13 +10,15 @@ import { SearchableSelect, type SearchableOption } from "@/components/ui/Searcha
 import { DateRangePicker, dateRangeLabel, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { Sparkline } from "@/components/charts/Sparkline";
+import { MiniBarChart } from "@/components/charts/MiniBarChart";
+import { MiniProgressDonut } from "@/components/charts/MiniProgressDonut";
 import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
 import { TopMetricsBarList } from "@/components/charts/TopMetricsBarList";
 import { getIntegrationDetail, listConnections, listFields, runQuery, type RnField } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 import { groupMetricsByPercentTier } from "@/lib/metricGrouping";
 import { groupMetricsByNamespace } from "@/lib/metricNamespaceGrouping";
-import { getMetricVisual, pickSimplestMatch, HERO_PRIORITY } from "@/lib/metricVisuals";
+import { getMetricVisual, isRateMetric, pickSimplestMatch, TONE_HEX, HERO_PRIORITY } from "@/lib/metricVisuals";
 import { pickTimeDimension } from "@/lib/timeDimension";
 import { getDefaultAccount, setDefaultAccount } from "@/lib/defaultAccounts";
 import { useAuthStore } from "@/store/authStore";
@@ -508,17 +510,37 @@ export default function IntegrationDetail() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleMetrics.map((field, i) => {
               const series = sortedRows.map((row) => Number(row[field.field_id]) || 0);
+              const hasData = series.some((v) => v !== 0);
               const { icon: Icon, tone } = getMetricVisual(field.field_name);
+              const rate = isRateMetric(field.field_name);
+              const color = TONE_HEX[tone];
+
+              // A rate (CTR and friends) should be averaged across the
+              // period, not summed — and reads better as a progress donut
+              // than a trend line. Everything else alternates line/bar so
+              // the grid isn't a wall of identical sparklines.
+              const average = series.length ? series.reduce((a, b) => a + b, 0) / series.length : 0;
+              const value = rate ? average : totalsById.get(field.field_id) ?? 0;
+
+              let footer;
+              if (!hasData) {
+                footer = undefined;
+              } else if (rate) {
+                footer = <MiniProgressDonut value={average} color={color} />;
+              } else if (i % 2 === 0) {
+                footer = <Sparkline data={series} color={color} />;
+              } else {
+                footer = <MiniBarChart data={series} color={color} />;
+              }
+
               return (
                 <GlowCard
                   key={field.field_id}
                   label={field.field_name}
-                  value={(totalsById.get(field.field_id) ?? 0).toLocaleString(undefined, {
-                    maximumFractionDigits: 2,
-                  })}
+                  value={value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   icon={<Icon size={16} />}
                   accent={tone ?? GRID_ACCENTS[i % GRID_ACCENTS.length]}
-                  footer={series.some((v) => v !== 0) ? <Sparkline data={series} /> : undefined}
+                  footer={footer}
                 />
               );
             })}

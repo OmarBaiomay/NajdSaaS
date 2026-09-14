@@ -65,3 +65,25 @@ export function getMetricVisual(fieldNameOrId: string): MetricVisual {
   const match = KEYWORD_VISUALS.find((v) => v.test.test(fieldNameOrId));
   return match ? { icon: match.icon, tone: match.tone } : { icon: BarChart3, tone: "slate" };
 }
+
+// Hex equivalents of each tone (Tailwind's ~500 shade), for chart libraries
+// like Recharts that take real color values rather than class names.
+export const TONE_HEX: Record<MetricTone, string> = {
+  sky: "#0ea5e9",
+  indigo: "#6366f1",
+  emerald: "#10b981",
+  violet: "#8b5cf6",
+  orange: "#f97316",
+  teal: "#14b8a6",
+  pink: "#ec4899",
+  rose: "#f43f5e",
+  amber: "#f59e0b",
+  slate: "#64748b",
+};
+
+/** True for rate/percentage-style metrics (CTR and its unique/outbound/inline
+ * variants) — small enough and bounded enough (0-100ish) to show as a
+ * progress-ring donut instead of a trend line. */
+export function isRateMetric(fieldName: string): boolean {
+  return /\bctr\b/i.test(fieldName);
+}
