@@ -6,6 +6,7 @@ import { Building2, Users, ShieldCheck } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { Card } from "@/components/ui/Card";
+import { DashboardBackdrop } from "@/components/layout/DashboardBackdrop";
 import { getMyAgency } from "@/lib/agencies";
 import { listTenants } from "@/lib/tenants";
 
@@ -35,7 +36,7 @@ export default function AgencyDashboard() {
   }, [tenants]);
 
   return (
-    <div className="space-y-6">
+    <DashboardBackdrop>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <GlowCard label={t("dashboard.totalTenants")} value={agency?._count.tenants ?? "–"} icon={<Building2 size={18} />} accent="brand" />
         <GlowCard label={t("dashboard.totalUsers")} value={agency?._count.users ?? "–"} icon={<Users size={18} />} accent="violet" />
@@ -66,6 +67,6 @@ export default function AgencyDashboard() {
           </Link>
         </p>
       </Card>
-    </div>
+    </DashboardBackdrop>
   );
 }

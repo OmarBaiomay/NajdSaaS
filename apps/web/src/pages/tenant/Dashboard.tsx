@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Plug, Building2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { DashboardBackdrop } from "@/components/layout/DashboardBackdrop";
 import { getIntegrationStatus, listIntegrations, listConnections } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 
@@ -42,18 +43,20 @@ export default function TenantDashboard() {
 
   if (!connected) {
     return (
-      <Card className="flex flex-col items-center gap-2 py-12 text-center">
-        <Plug size={28} className="text-slate-300" />
-        <p className="text-sm text-slate-500">{t("integrations.connectFirst")}</p>
-        <Link to="/tenant/settings" className="mt-1 text-sm font-medium text-brand-600 hover:underline">
-          {t("nav.settings")} →
-        </Link>
-      </Card>
+      <DashboardBackdrop>
+        <Card className="flex flex-col items-center gap-2 py-12 text-center">
+          <Plug size={28} className="text-slate-300" />
+          <p className="text-sm text-slate-500">{t("integrations.connectFirst")}</p>
+          <Link to="/tenant/settings" className="mt-1 text-sm font-medium text-brand-600 hover:underline">
+            {t("nav.settings")} →
+          </Link>
+        </Card>
+      </DashboardBackdrop>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <DashboardBackdrop>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <GlowCard
           label={t("dashboard.connectedIntegrations")}
@@ -97,6 +100,6 @@ export default function TenantDashboard() {
           })}
         </div>
       )}
-    </div>
+    </DashboardBackdrop>
   );
 }

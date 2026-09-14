@@ -3,7 +3,9 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-const DEMO_PASSWORD = "Demo1234!";
+const DEMO_PASSWORD = "123456";
+const AGENCY_OWNER_EMAIL = "agancy@najd.com";
+const TENANT_OWNER_EMAIL = "tenant@najd.com";
 
 async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
@@ -19,18 +21,25 @@ async function main() {
     },
   });
 
-  const agencyOwner = await prisma.user.upsert({
-    where: { agencyId_email: { agencyId: agency.id, email: "owner@najd-demo.test" } },
-    update: {},
-    create: {
-      agencyId: agency.id,
-      email: "owner@najd-demo.test",
-      passwordHash,
-      firstName: "Sara",
-      lastName: "Al-Ghamdi",
-      role: "AGENCY_OWNER",
-    },
-  });
+  // Matched by role within the agency (not by email) so re-running this
+  // seed after changing the demo email/password updates the existing user
+  // in place instead of creating a duplicate.
+  const existingOwner = await prisma.user.findFirst({ where: { agencyId: agency.id, role: "AGENCY_OWNER" } });
+  const agencyOwner = existingOwner
+    ? await prisma.user.update({
+        where: { id: existingOwner.id },
+        data: { email: AGENCY_OWNER_EMAIL, passwordHash },
+      })
+    : await prisma.user.create({
+        data: {
+          agencyId: agency.id,
+          email: AGENCY_OWNER_EMAIL,
+          passwordHash,
+          firstName: "Sara",
+          lastName: "Al-Ghamdi",
+          role: "AGENCY_OWNER",
+        },
+      });
 
   const tenant = await prisma.tenant.upsert({
     where: { agencyId_slug: { agencyId: agency.id, slug: "acme" } },
@@ -44,19 +53,25 @@ async function main() {
     },
   });
 
-  const tenantOwner = await prisma.user.upsert({
-    where: { agencyId_email: { agencyId: agency.id, email: "admin@acme-demo.test" } },
-    update: {},
-    create: {
-      agencyId: agency.id,
-      tenantId: tenant.id,
-      email: "admin@acme-demo.test",
-      passwordHash,
-      firstName: "Khaled",
-      lastName: "Youssef",
-      role: "TENANT_OWNER",
-    },
+  const existingTenantOwner = await prisma.user.findFirst({
+    where: { agencyId: agency.id, tenantId: tenant.id, role: "TENANT_OWNER" },
   });
+  const tenantOwner = existingTenantOwner
+    ? await prisma.user.update({
+        where: { id: existingTenantOwner.id },
+        data: { email: TENANT_OWNER_EMAIL, passwordHash },
+      })
+    : await prisma.user.create({
+        data: {
+          agencyId: agency.id,
+          tenantId: tenant.id,
+          email: TENANT_OWNER_EMAIL,
+          passwordHash,
+          firstName: "Khaled",
+          lastName: "Youssef",
+          role: "TENANT_OWNER",
+        },
+      });
 
   console.log("\nSeed complete:\n");
   console.log(`Agency:        ${agency.name} (${agency.slug})`);
