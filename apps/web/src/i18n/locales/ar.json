@@ -2,7 +2,8 @@
   "app": { "name": "نجد" },
   "nav": {
     "dashboard": "لوحة التحكم",
-    "reports": "التقارير",
+    "integrations": "التكاملات",
+    "tenantApiKey": "ربط مفتاح API",
     "tenants": "الحسابات الفرعية",
     "users": "المستخدمون",
     "settings": "الإعدادات",
@@ -12,15 +13,67 @@
     "login": "تسجيل الدخول",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
-    "welcomeBack": "مرحبًا بعودتك"
+    "welcomeBack": "مرحبًا بعودتك",
+    "loginSubtitle": "سجّل الدخول للوصول إلى لوحة التحكم",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
   },
   "dashboard": {
     "agencyOverview": "نظرة عامة على الوكالة",
     "tenantOverview": "نظرة عامة على الحساب",
     "revenue": "الإيرادات",
     "activeTenants": "الحسابات النشطة",
-    "activeUsers": "المستخدمون النشطون"
+    "activeUsers": "المستخدمون النشطون",
+    "totalViews": "إجمالي المشاهدات",
+    "totalProfit": "إجمالي الأرباح",
+    "plan": "الباقة"
   },
-  "theme": { "light": "فاتح", "dark": "داكن" },
-  "language": { "en": "الإنجليزية", "ar": "العربية" }
+  "viewAs": {
+    "label": "عرض كـ",
+    "agency": "الوكالة",
+    "tenant": "الحساب الفرعي",
+    "viewingAs": "تعرض بيانات",
+    "selectTenantFirst": "اختر حسابًا فرعيًا من \"عرض كـ\" في الشريط الجانبي لعرض بياناته"
+  },
+  "integrations": {
+    "connectFirst": "قم بربط مفتاح Reporting Ninja أولًا لعرض التكاملات هنا.",
+    "searchPlaceholder": "ابحث عن تكامل…",
+    "viewData": "عرض البيانات",
+    "account": "الحساب",
+    "addMetric": "إضافة مقياس",
+    "noAccounts": "لا توجد حسابات مرتبطة بهذا التكامل في حساب Reporting Ninja الخاص بك.",
+    "loadError": "فشل تحميل البيانات — حاول إعادة اختبار المفتاح.",
+    "last30Days": "آخر 30 يومًا"
+  },
+  "settings": {
+    "reportingNinjaTitle": "Reporting Ninja",
+    "reportingNinjaSubtitle": "قم بربط مفتاح Reporting Ninja الخاص بك لجلب البيانات إلى لوحة التحكم هذه.",
+    "statusNotConnected": "غير مرتبط",
+    "statusPending": "قيد الانتظار",
+    "statusConnected": "متصل",
+    "statusInvalid": "غير صالح",
+    "currentKey": "المفتاح الحالي",
+    "lastTested": "آخر اختبار",
+    "keyPlaceholder": "الصق مفتاح Reporting Ninja الخاص بك",
+    "saveAndTest": "حفظ واختبار",
+    "savingAndTesting": "جارٍ الحفظ والاختبار…",
+    "retest": "إعادة اختبار الاتصال",
+    "retesting": "جارٍ الاختبار…",
+    "disconnect": "قطع الاتصال",
+    "connectedSuccess": "تم الاتصال — البيانات جاهزة في صفحة التكاملات."
+  },
+  "theme": {
+    "change": "تغيير المظهر",
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام"
+  },
+  "language": { "en": "الإنجليزية", "ar": "العربية" },
+  "common": {
+    "select": "اختر…",
+    "search": "ابحث…",
+    "noResults": "لا توجد نتائج",
+    "loading": "جارٍ التحميل…"
+  }
 }

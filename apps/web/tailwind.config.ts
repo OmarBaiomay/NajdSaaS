@@ -6,7 +6,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "Tajawal", "system-ui", "sans-serif"],
+        sans: ["Cairo", "Inter", "system-ui", "sans-serif"],
       },
       colors: {
         brand: {

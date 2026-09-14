@@ -18,20 +18,20 @@ $$ language sql stable;
 
 drop policy if exists agencies_isolation on agencies;
 create policy agencies_isolation on agencies
-  using (najd_bypass_rls() or id = current_setting('app.current_agency_id', true)::uuid);
+  using (najd_bypass_rls() or id = current_setting('app.current_agency_id', true));
 
 drop policy if exists tenants_isolation on tenants;
 create policy tenants_isolation on tenants
-  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true)::uuid);
+  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true));
 
 drop policy if exists users_isolation on users;
 create policy users_isolation on users
-  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true)::uuid);
+  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true));
 
 drop policy if exists audit_logs_isolation on audit_logs;
 create policy audit_logs_isolation on audit_logs
-  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true)::uuid);
+  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true));
 
 drop policy if exists integration_credentials_isolation on integration_credentials;
 create policy integration_credentials_isolation on integration_credentials
-  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true)::uuid);
+  using (najd_bypass_rls() or "agencyId" = current_setting('app.current_agency_id', true));

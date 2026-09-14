@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: najd_dev_password
       POSTGRES_DB: najd_saas
     ports:
-      - "5432:5432"
+      - "5436:5432"
     volumes:
       - najd_postgres_data:/var/lib/postgresql/data
     healthcheck:

@@ -43,6 +43,10 @@ pnpm db:generate
 pnpm db:migrate           # creates tables
 psql "$DATABASE_URL" -f apps/api/prisma/sql/rls.sql   # apply RLS policies
 
+# NOTE: docker-compose maps Postgres to host port 5436 (not 5432) to avoid
+# clashing with a local Postgres install. Update DATABASE_URL accordingly:
+# postgresql://najd:najd_dev_password@localhost:5436/najd_saas?schema=public
+
 pnpm dev                  # runs web (5173) + api (4000) in parallel
 ```
 

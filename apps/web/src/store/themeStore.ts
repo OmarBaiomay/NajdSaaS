@@ -1,47 +1,60 @@
 import { create } from "zustand";
 
-type Theme = "light" | "dark";
+export type ThemePreference = "light" | "dark" | "system";
+type ResolvedTheme = "light" | "dark";
 
-function getInitialTheme(): Theme {
-  try {
-    const stored = localStorage.getItem("najd-theme") as Theme | null;
-    if (stored) return stored;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  } catch {
-    return "light";
-  }
+const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+function resolve(preference: ThemePreference): ResolvedTheme {
+  return preference === "system" ? (media.matches ? "dark" : "light") : preference;
 }
 
-function applyTheme(theme: Theme) {
+function applyResolvedTheme(theme: ResolvedTheme) {
   document.documentElement.classList.toggle("dark", theme === "dark");
+}
+
+function getStoredPreference(): ThemePreference {
   try {
-    localStorage.setItem("najd-theme", theme);
+    const stored = localStorage.getItem("najd-theme") as ThemePreference | null;
+    if (stored === "light" || stored === "dark" || stored === "system") return stored;
   } catch {
-    /* private mode / storage disabled — theme just won't persist */
+    /* private mode / storage disabled */
   }
+  return "system";
 }
 
 interface ThemeState {
-  theme: Theme;
-  toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
+  preference: ThemePreference;
+  resolved: ResolvedTheme;
+  setPreference: (preference: ThemePreference) => void;
 }
 
 export const useThemeStore = create<ThemeState>((set) => {
-  const initial = getInitialTheme();
-  applyTheme(initial);
+  const initialPreference = getStoredPreference();
+  const initialResolved = resolve(initialPreference);
+  applyResolvedTheme(initialResolved);
+
+  media.addEventListener("change", () => {
+    const current = getStoredPreference();
+    if (current === "system") {
+      const next = resolve("system");
+      applyResolvedTheme(next);
+      set({ resolved: next });
+    }
+  });
 
   return {
-    theme: initial,
-    toggleTheme: () =>
-      set((state) => {
-        const next = state.theme === "dark" ? "light" : "dark";
-        applyTheme(next);
-        return { theme: next };
-      }),
-    setTheme: (theme) => {
-      applyTheme(theme);
-      set({ theme });
+    preference: initialPreference,
+    resolved: initialResolved,
+    setPreference: (preference) => {
+      const resolved = resolve(preference);
+      applyResolvedTheme(resolved);
+      try {
+        localStorage.setItem("najd-theme", preference);
+      } catch {
+        /* private mode / storage disabled — preference just won't persist */
+      }
+      set({ preference, resolved });
     },
   };
 });

@@ -2,7 +2,8 @@
   "app": { "name": "NajdSaaS" },
   "nav": {
     "dashboard": "Dashboard",
-    "reports": "Reports",
+    "integrations": "Integrations",
+    "tenantApiKey": "Connect API Key",
     "tenants": "Tenants",
     "users": "Users",
     "settings": "Settings",
@@ -12,15 +13,67 @@
     "login": "Log in",
     "email": "Email",
     "password": "Password",
-    "welcomeBack": "Welcome back"
+    "welcomeBack": "Welcome back",
+    "loginSubtitle": "Sign in to access your dashboard",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "invalidCredentials": "Invalid email or password"
   },
   "dashboard": {
     "agencyOverview": "Agency Overview",
     "tenantOverview": "Tenant Overview",
     "revenue": "Revenue",
     "activeTenants": "Active Tenants",
-    "activeUsers": "Active Users"
+    "activeUsers": "Active Users",
+    "totalViews": "Total Views",
+    "totalProfit": "Total Profit",
+    "plan": "Plan"
   },
-  "theme": { "light": "Light", "dark": "Dark" },
-  "language": { "en": "English", "ar": "Arabic" }
+  "viewAs": {
+    "label": "View as",
+    "agency": "Agency",
+    "tenant": "Tenant",
+    "viewingAs": "Viewing as",
+    "selectTenantFirst": "Select a tenant from \"View as\" in the sidebar to see its data"
+  },
+  "integrations": {
+    "connectFirst": "Connect your Reporting Ninja API key first to see integrations here.",
+    "searchPlaceholder": "Search integrations…",
+    "viewData": "View data",
+    "account": "Account",
+    "addMetric": "Add metric",
+    "noAccounts": "No connected accounts found for this integration in your Reporting Ninja account.",
+    "loadError": "Failed to load data — try re-testing your key.",
+    "last30Days": "last 30 days"
+  },
+  "settings": {
+    "reportingNinjaTitle": "Reporting Ninja",
+    "reportingNinjaSubtitle": "Connect your Reporting Ninja API key to pull data into this dashboard.",
+    "statusNotConnected": "Not connected",
+    "statusPending": "Pending",
+    "statusConnected": "Connected",
+    "statusInvalid": "Invalid",
+    "currentKey": "Current key",
+    "lastTested": "last tested",
+    "keyPlaceholder": "Paste your Reporting Ninja API key",
+    "saveAndTest": "Save & test",
+    "savingAndTesting": "Saving & testing…",
+    "retest": "Re-test connection",
+    "retesting": "Testing…",
+    "disconnect": "Disconnect",
+    "connectedSuccess": "Connected — data is ready on the Integrations page."
+  },
+  "theme": {
+    "change": "Change theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": { "en": "English", "ar": "Arabic" },
+  "common": {
+    "select": "Select…",
+    "search": "Search…",
+    "noResults": "No results",
+    "loading": "Loading…"
+  }
 }
