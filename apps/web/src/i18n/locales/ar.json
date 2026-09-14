@@ -22,12 +22,26 @@
   "dashboard": {
     "agencyOverview": "نظرة عامة على الوكالة",
     "tenantOverview": "نظرة عامة على الحساب",
-    "revenue": "الإيرادات",
-    "activeTenants": "الحسابات النشطة",
-    "activeUsers": "المستخدمون النشطون",
-    "totalViews": "إجمالي المشاهدات",
-    "totalProfit": "إجمالي الأرباح",
-    "plan": "الباقة"
+    "totalTenants": "إجمالي الحسابات الفرعية",
+    "totalUsers": "إجمالي المستخدمين",
+    "agencyStatus": "الحالة",
+    "status": {
+      "ACTIVE": "نشط",
+      "TRIAL": "تجريبي",
+      "SUSPENDED": "موقوف"
+    },
+    "tenantsCreatedByMonth": "الحسابات الفرعية المُنشأة شهريًا",
+    "noTenantsYet": "لا توجد حسابات فرعية بعد.",
+    "viewAsHint": "استخدم \"عرض كـ\" في الشريط الجانبي لتصفح بيانات حساب فرعي معيّن، أو أدر الحسابات الفرعية مباشرة:",
+    "connectedIntegrations": "التكاملات المرتبطة",
+    "totalAccounts": "إجمالي الحسابات",
+    "noDataSources": "لا توجد مصادر بيانات مرتبطة بعد في حساب Reporting Ninja الخاص بك.",
+    "accountCount_zero": "لا حسابات",
+    "accountCount_one": "حساب واحد",
+    "accountCount_two": "حسابان",
+    "accountCount_few": "{{count}} حسابات",
+    "accountCount_many": "{{count}} حسابًا",
+    "accountCount_other": "{{count}} حساب"
   },
   "viewAs": {
     "label": "عرض كـ",

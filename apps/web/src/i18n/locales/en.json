@@ -22,12 +22,22 @@
   "dashboard": {
     "agencyOverview": "Agency Overview",
     "tenantOverview": "Tenant Overview",
-    "revenue": "Revenue",
-    "activeTenants": "Active Tenants",
-    "activeUsers": "Active Users",
-    "totalViews": "Total Views",
-    "totalProfit": "Total Profit",
-    "plan": "Plan"
+    "totalTenants": "Total Tenants",
+    "totalUsers": "Total Users",
+    "agencyStatus": "Status",
+    "status": {
+      "ACTIVE": "Active",
+      "TRIAL": "Trial",
+      "SUSPENDED": "Suspended"
+    },
+    "tenantsCreatedByMonth": "Tenants created by month",
+    "noTenantsYet": "No tenants yet.",
+    "viewAsHint": "Use \"View as\" in the sidebar to browse a specific tenant's data, or manage tenants directly:",
+    "connectedIntegrations": "Connected Integrations",
+    "totalAccounts": "Total Accounts",
+    "noDataSources": "No data sources are connected yet in your Reporting Ninja account.",
+    "accountCount_one": "{{count}} account",
+    "accountCount_other": "{{count}} accounts"
   },
   "viewAs": {
     "label": "View as",
