@@ -2,7 +2,7 @@
   "app": { "name": "نجد" },
   "nav": {
     "dashboard": "لوحة التحكم",
-    "integrations": "التكاملات",
+    "integrations": "الحسابات",
     "tenantApiKey": "ربط مفتاح API",
     "tenants": "الحسابات الفرعية",
     "users": "المستخدمون",
@@ -59,6 +59,7 @@
     "connectFirst": "قم بربط مفتاح Reporting Ninja أولًا لعرض التكاملات هنا.",
     "searchPlaceholder": "ابحث عن تكامل…",
     "viewData": "عرض البيانات",
+    "noAccountsLinked": "لا حسابات مرتبطة",
     "account": "الحساب",
     "dataView": "طريقة العرض",
     "selectDataView": "اختر طريقة عرض البيانات أعلاه للمتابعة.",

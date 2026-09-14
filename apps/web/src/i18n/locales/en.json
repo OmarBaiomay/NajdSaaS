@@ -2,7 +2,7 @@
   "app": { "name": "NajdSaaS" },
   "nav": {
     "dashboard": "Dashboard",
-    "integrations": "Integrations",
+    "integrations": "Accounts",
     "tenantApiKey": "Connect API Key",
     "tenants": "Tenants",
     "users": "Users",
@@ -55,6 +55,7 @@
     "connectFirst": "Connect your Reporting Ninja API key first to see integrations here.",
     "searchPlaceholder": "Search integrations…",
     "viewData": "View data",
+    "noAccountsLinked": "No accounts linked",
     "account": "Account",
     "dataView": "Data view",
     "selectDataView": "Select a data view above to continue.",

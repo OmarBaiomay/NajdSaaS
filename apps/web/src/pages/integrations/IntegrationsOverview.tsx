@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { getIntegrationStatus, listIntegrations } from "@/lib/reportingNinja";
+import { getIntegrationStatus, listIntegrations, listConnections } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 
 export default function IntegrationsOverview() {
@@ -21,7 +21,32 @@ export default function IntegrationsOverview() {
     enabled: connected,
   });
 
-  const filtered = integrations?.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase())) ?? [];
+  // How many real accounts are actually connected per integration — drives
+  // both the "N accounts linked" badge and putting connected ones first.
+  const { data: accountCounts, isLoading: countsLoading } = useQuery({
+    queryKey: ["rn-integration-account-counts", integrations?.map((i) => i.id).join(",")],
+    queryFn: async () => {
+      const settled = await Promise.allSettled(integrations!.map((i) => listConnections(i.id)));
+      const counts = new Map<string, number>();
+      integrations!.forEach((integration, i) => {
+        const result = settled[i];
+        const connections = result.status === "fulfilled" ? result.value : [];
+        counts.set(
+          integration.id,
+          connections.reduce((sum, c) => sum + c.accounts.length, 0)
+        );
+      });
+      return counts;
+    },
+    enabled: connected && !!integrations && integrations.length > 0,
+  });
+
+  const sorted = useMemo(() => {
+    if (!integrations) return [];
+    return integrations.slice().sort((a, b) => (accountCounts?.get(b.id) ?? 0) - (accountCounts?.get(a.id) ?? 0));
+  }, [integrations, accountCounts]);
+
+  const filtered = sorted.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   if (!connected) {
     return (
@@ -48,6 +73,7 @@ export default function IntegrationsOverview() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((integration) => {
           const visual = getIntegrationVisual(integration.id);
+          const count = accountCounts?.get(integration.id) ?? 0;
           return (
             <button
               key={integration.id}
@@ -58,7 +84,13 @@ export default function IntegrationsOverview() {
                 {visual.icon}
               </span>
               <p className="mt-3 font-semibold text-slate-900 dark:text-white">{integration.name}</p>
-              <p className="mt-1 text-xs text-slate-400 group-hover:text-brand-600">{t("integrations.viewData")} →</p>
+              <p className="mt-1 text-xs text-slate-400 group-hover:text-brand-600">
+                {countsLoading
+                  ? t("common.loading")
+                  : count > 0
+                    ? t("dashboard.accountCount", { count })
+                    : t("integrations.noAccountsLinked")}
+              </p>
             </button>
           );
         })}
