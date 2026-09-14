@@ -8,8 +8,10 @@ import { GlowCard } from "@/components/ui/GlowCard";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { Sparkline } from "@/components/charts/Sparkline";
+import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
 import { getIntegrationDetail, listConnections, listFields, runQuery } from "@/lib/reportingNinja";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
+import { groupMetricsByPercentTier } from "@/lib/metricGrouping";
 
 const ACCENTS = ["brand", "violet", "teal", "amber"] as const;
 
@@ -147,17 +149,26 @@ export default function IntegrationDetail() {
     [rows, dimensionField]
   );
 
-  const visibleMetrics = useMemo(
-    () =>
-      metricFields.filter(
-        (f) =>
-          !queryResult?.unavailable.includes(f.field_id) &&
-          f.field_name.toLowerCase().includes(metricSearch.trim().toLowerCase())
-      ),
-    [metricFields, queryResult, metricSearch]
+  const availableMetrics = useMemo(
+    () => metricFields.filter((f) => !queryResult?.unavailable.includes(f.field_id)),
+    [metricFields, queryResult]
   );
 
-  const primaryMetric = fieldsData?.default_metric ?? visibleMetrics[0]?.field_id;
+  // Metric families like "Video Plays at 25/50/75/100%" tell a much clearer
+  // story as a donut than as four disconnected number cards — pull those out.
+  const { groups: donutGroups, ungrouped } = useMemo(
+    () => groupMetricsByPercentTier(availableMetrics),
+    [availableMetrics]
+  );
+
+  const totalFor = (fieldId: string) => sortedRows.reduce((sum, row) => sum + (Number(row[fieldId]) || 0), 0);
+
+  const visibleMetrics = useMemo(
+    () => ungrouped.filter((f) => f.field_name.toLowerCase().includes(metricSearch.trim().toLowerCase())),
+    [ungrouped, metricSearch]
+  );
+
+  const primaryMetric = fieldsData?.default_metric ?? visibleMetrics[0]?.field_id ?? donutGroups[0]?.tiers[0]?.field.field_id;
   const primaryChartData = sortedRows.map((row) => ({
     label: String(row[dimensionField]),
     value: Number(row[primaryMetric ?? ""]) || 0,
@@ -231,6 +242,37 @@ export default function IntegrationDetail() {
                 {t("integrations.last30Days")}
               </h2>
               <RevenueChart data={primaryChartData} />
+            </div>
+          )}
+
+          {donutGroups.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {donutGroups.map((group) => {
+                const baseTotal = group.baseField ? totalFor(group.baseField.field_id) : undefined;
+                return (
+                  <div
+                    key={group.key}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <h2 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                      {t("integrations.breakdownOf", { name: group.baseLabel })}
+                    </h2>
+                    {baseTotal !== undefined && (
+                      <p className="mb-2 text-xs text-slate-400">
+                        {t("integrations.ofTotal", { total: baseTotal.toLocaleString() })}
+                      </p>
+                    )}
+                    <MetricDonutChart
+                      slices={group.tiers.map((tier) => ({
+                        label: `${tier.percent}%`,
+                        value: totalFor(tier.field.field_id),
+                      }))}
+                      centerValue={baseTotal?.toLocaleString()}
+                      centerLabel={group.baseLabel}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
 

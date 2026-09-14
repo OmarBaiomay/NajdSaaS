@@ -48,6 +48,8 @@
     "loadError": "فشل تحميل البيانات — حاول إعادة اختبار المفتاح.",
     "last30Days": "آخر 30 يومًا",
     "searchMetrics": "ابحث عن مقياس…",
+    "breakdownOf": "{{name}} — توزيع الإكمال",
+    "ofTotal": "من إجمالي {{total}}",
     "someMetricsUnavailable_zero": "جميع المقاييس متاحة لهذا الحساب.",
     "someMetricsUnavailable_one": "مقياس واحد غير متاح لهذا الحساب وتم إخفاؤه.",
     "someMetricsUnavailable_two": "مقياسان غير متاحين لهذا الحساب وتم إخفاؤهما.",

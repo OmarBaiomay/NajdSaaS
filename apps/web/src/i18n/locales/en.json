@@ -48,6 +48,8 @@
     "loadError": "Failed to load data — try re-testing your key.",
     "last30Days": "last 30 days",
     "searchMetrics": "Search metrics…",
+    "breakdownOf": "{{name}} — completion breakdown",
+    "ofTotal": "of {{total}} total",
     "someMetricsUnavailable": "{{count}} metric was unavailable for this account and is hidden.",
     "someMetricsUnavailable_other": "{{count}} metrics were unavailable for this account and are hidden."
   },
