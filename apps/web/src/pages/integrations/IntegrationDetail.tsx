@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Search } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -41,6 +42,25 @@ interface BisectResult {
   unavailable: string[];
 }
 
+// Some error codes mean the whole connection/query is broken (expired
+// provider auth, our key being invalid, rate limiting) — splitting the
+// field list can never fix those, so retrying dozens of times just wastes
+// calls. Only bisect on genuine "this specific combination of fields is
+// invalid" errors; anything else aborts immediately and surfaces as a
+// real, actionable error instead of a vague "some metrics unavailable".
+const NON_SPLITTABLE_CODES = new Set(["AUTH_EXPIRED", "AUTH_INVALID", "NOT_CONNECTED", "RATE_LIMITED"]);
+
+function isNonSplittableError(err: unknown): boolean {
+  if (!isAxiosError(err)) return false;
+  const code = (err.response?.data as { error?: { code?: string } } | undefined)?.error?.code;
+  return !!code && NON_SPLITTABLE_CODES.has(code);
+}
+
+export function extractApiErrorMessage(err: unknown): string | undefined {
+  if (!isAxiosError(err)) return undefined;
+  return (err.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
+}
+
 async function fetchMetricsBisecting(
   fields: string[],
   runOne: (fields: string[]) => Promise<Record<string, string | number>[]>,
@@ -54,7 +74,8 @@ async function fetchMetricsBisecting(
   try {
     const rows = await runOne(fields);
     return { rows, unavailable: [] };
-  } catch {
+  } catch (err) {
+    if (isNonSplittableError(err)) throw err;
     if (fields.length === 1) return { rows: [], unavailable: fields };
     const mid = Math.ceil(fields.length / 2);
     const [a, b] = await Promise.all([
@@ -404,7 +425,9 @@ export default function IntegrationDetail() {
         <Card className="text-center text-sm text-slate-500">{t("integrations.noAccounts")}</Card>
       )}
 
-      {queryError && <p className="text-sm text-red-500">{t("integrations.loadError")}</p>}
+      {queryError && (
+        <p className="text-sm text-red-500">{extractApiErrorMessage(queryError) ?? t("integrations.loadError")}</p>
+      )}
 
       {/* The whole layout renders as soon as we know the field catalog (no
           account needed for that) — values just sit at 0 until an account is

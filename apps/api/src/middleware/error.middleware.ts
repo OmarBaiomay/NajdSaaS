@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { ApiError } from "../utils/ApiError.js";
+import { ReportingNinjaError } from "../modules/integrations/reportingNinja.client.js";
 import { logger } from "../config/logger.js";
 
 export function notFoundHandler(req: Request, res: Response) {
@@ -17,6 +18,16 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
 
   if (err instanceof ApiError) {
     return res.status(err.status).json({ error: { code: err.code, message: err.message } });
+  }
+
+  // Reporting Ninja's own error messages are specific and actionable (e.g.
+  // "re-authorize your connection at ..."), unlike a generic 500 — forward
+  // them as-is instead of discarding them. Never 401 here: that status is
+  // reserved for our own JWT auth and would wrongly trigger the frontend's
+  // access-token refresh flow.
+  if (err instanceof ReportingNinjaError) {
+    const status = err.httpStatus === 429 ? 429 : 400;
+    return res.status(status).json({ error: { code: err.errorCode, message: err.message } });
   }
 
   logger.error({ err }, "Unhandled error");

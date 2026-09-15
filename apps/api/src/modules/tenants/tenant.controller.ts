@@ -21,3 +21,12 @@ export const getOne = asyncHandler(async (req: Request, res: Response) => {
   const tenant = await tenantService.getTenant(req.auth!.agencyId, id);
   res.json({ tenant });
 });
+
+/** The currently-scoped tenant — a tenant user's own tenant, or whichever
+ * tenant an agency user is browsing via "View as". Used for things like
+ * showing the tenant's real name in the dashboard header. */
+export const getMine = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.tenantScopeId) throw ApiError.notFound("No tenant is currently in scope");
+  const tenant = await tenantService.getTenant(req.auth!.agencyId, req.tenantScopeId);
+  res.json({ tenant });
+});
