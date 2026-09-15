@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Official new Saudi Riyal symbol (SAMA), via
+   github.com/abdulrysrr/new-saudi-riyal-symbol (MIT) — the glyph lives at
+   the private-use codepoint U+00EA in this font only; see SarSymbol.tsx. */
+@font-face {
+  font-family: "SaudiRiyalSymbol";
+  src:
+    url("/fonts/saudi-riyal-symbol/saudiriyalsymbol.woff2") format("woff2"),
+    url("/fonts/saudi-riyal-symbol/saudiriyalsymbol.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-sar {
+  font-family: "SaudiRiyalSymbol", sans-serif;
+  font-weight: normal;
+  font-style: normal;
+}
+
 html {
   color-scheme: light;
 }

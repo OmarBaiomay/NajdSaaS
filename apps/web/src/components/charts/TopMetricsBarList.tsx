@@ -1,9 +1,11 @@
+import type { ReactNode } from "react";
+
 export interface BarItem {
   label: string;
   value: number;
-  /** Pre-formatted display string (e.g. "SAR 1,345.61") — falls back to a
-   * plain locale-formatted number when omitted. */
-  displayValue?: string;
+  /** Pre-formatted display value (e.g. a <CurrencyAmount>, or a plain
+   * "1,345.61" string) — falls back to a locale-formatted number when omitted. */
+  displayValue?: ReactNode;
 }
 
 /** Ranked horizontal bars — used to turn a large "family" of related metrics

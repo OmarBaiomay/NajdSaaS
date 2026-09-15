@@ -30,7 +30,8 @@ import { groupMetricsByNamespace } from "@/lib/metricNamespaceGrouping";
 import { getMetricVisual, isRateMetric, pickSimplestMatch, TONE_HEX, HERO_PRIORITY } from "@/lib/metricVisuals";
 import { pickTimeDimension } from "@/lib/timeDimension";
 import { getDefaultAccount, setDefaultAccount } from "@/lib/defaultAccounts";
-import { isCurrencyMetric, formatCurrency } from "@/lib/currency";
+import { isCurrencyMetric } from "@/lib/currency";
+import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { useAuthStore } from "@/store/authStore";
 import { useViewAsStore } from "@/store/viewAsStore";
 
@@ -230,9 +231,11 @@ export default function IntegrationDetail() {
     ?.flatMap((c) => c.accounts)
     .find((a) => a.account_id === accountId)?.currency;
   const formatMetricValue = (fieldName: string, value: number) =>
-    isCurrencyMetric(fieldName)
-      ? formatCurrency(value, selectedCurrency, i18n.language)
-      : value.toLocaleString(i18n.language, { maximumFractionDigits: 2 });
+    isCurrencyMetric(fieldName) ? (
+      <CurrencyAmount value={value} currencyCode={selectedCurrency} locale={i18n.language} />
+    ) : (
+      value.toLocaleString(i18n.language, { maximumFractionDigits: 2 })
+    );
 
   // Auto-select an account once the list has loaded: the one remembered
   // from last time this integration was opened (scoped per tenant), or —
@@ -559,7 +562,7 @@ export default function IntegrationDetail() {
               shape={chartShape}
               valueFormatter={
                 isCurrencyMetric(chartMetricField?.field_name ?? effectiveChartMetric)
-                  ? (v) => formatCurrency(v, selectedCurrency, i18n.language)
+                  ? (v) => <CurrencyAmount value={v} currencyCode={selectedCurrency} locale={i18n.language} />
                   : undefined
               }
             />

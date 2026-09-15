@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -28,7 +29,7 @@ export function RevenueChart({
   shape?: ChartShape;
   /** Formats the tooltip value — pass a currency formatter for cost/spend
    * metrics so the chart matches the cards showing the same figure. */
-  valueFormatter?: (value: number) => string;
+  valueFormatter?: (value: number) => ReactNode;
 }) {
   const grid = <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" />;
   const x = <XAxis dataKey="label" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />;
