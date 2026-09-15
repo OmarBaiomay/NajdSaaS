@@ -28,12 +28,15 @@ export function formatPlainAmount(value: number, locale: string): string {
 /** Formats a monetary value using the connected account's real currency
  * (from Reporting Ninja) rather than assuming USD.
  *
- * Intl.NumberFormat has no symbol data for a lot of real-world currencies
- * (AED, KWD, and plenty more) and silently falls back to printing the bare
- * ISO code instead — exactly the "text, not a symbol" problem. So: ask Intl
- * first, and if it actually produced a symbol, use it; if it just echoed
- * the code back, fall through to CURRENCY_SYMBOL_MAP instead. Only when
- * neither has anything does the code itself show up. */
+ * CURRENCY_SYMBOL_MAP wins whenever we have the code, deliberately ahead of
+ * Intl — confirmed Intl.NumberFormat's own symbol is locale-dependent in a
+ * way that produces inconsistent, verbose results for the exact same
+ * currency: USD under the "ar" locale renders as "US$" (plus a stray
+ * invisible RTL mark) even with currencyDisplay:"narrowSymbol", while "en"
+ * correctly gives "$". Our table is a fixed, minimal symbol per currency
+ * regardless of UI language. Intl is the fallback only for codes we don't
+ * have — where it may still print the bare ISO code if it has no symbol
+ * data either (e.g. AED, KWD — not in the supplied table). */
 export function formatCurrency(value: number, currencyCode: string | undefined, locale: string): string {
   if (!currencyCode) {
     return value.toLocaleString(locale, { maximumFractionDigits: 2 });
@@ -41,22 +44,17 @@ export function formatCurrency(value: number, currencyCode: string | undefined, 
   const code = currencyCode.toUpperCase();
   const number = formatPlainAmount(value, locale);
 
+  if (CURRENCY_SYMBOL_MAP[code]) {
+    return `${CURRENCY_SYMBOL_MAP[code]} ${number}`;
+  }
   try {
-    // narrowSymbol prefers the plain symbol ("$") over a verbose form like
-    // "US$" where locale data offers both.
-    const formatter = new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: code,
       currencyDisplay: "narrowSymbol",
       maximumFractionDigits: 2,
-    });
-    const currencyPart = formatter.formatToParts(value).find((p) => p.type === "currency")?.value;
-    const gotRealSymbol = currencyPart && currencyPart.toUpperCase() !== code;
-
-    if (gotRealSymbol) return formatter.format(value);
-    if (CURRENCY_SYMBOL_MAP[code]) return `${CURRENCY_SYMBOL_MAP[code]} ${number}`;
-    return formatter.format(value); // no fallback available — the code is genuinely all we have
+    }).format(value);
   } catch {
-    return CURRENCY_SYMBOL_MAP[code] ? `${CURRENCY_SYMBOL_MAP[code]} ${number}` : `${number} ${currencyCode}`;
+    return `${number} ${currencyCode}`;
   }
 }
