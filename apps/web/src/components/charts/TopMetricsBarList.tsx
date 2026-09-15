@@ -1,6 +1,9 @@
 export interface BarItem {
   label: string;
   value: number;
+  /** Pre-formatted display string (e.g. "SAR 1,345.61") — falls back to a
+   * plain locale-formatted number when omitted. */
+  displayValue?: string;
 }
 
 /** Ranked horizontal bars — used to turn a large "family" of related metrics
@@ -27,7 +30,7 @@ export function TopMetricsBarList({
           <div className="mb-1 flex items-center justify-between gap-3 text-xs">
             <span className="truncate text-slate-600 dark:text-slate-300">{item.label}</span>
             <span className="shrink-0 font-medium text-slate-900 dark:text-white">
-              {item.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              {item.displayValue ?? item.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">

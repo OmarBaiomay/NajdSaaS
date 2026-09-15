@@ -30,6 +30,7 @@ import { groupMetricsByNamespace } from "@/lib/metricNamespaceGrouping";
 import { getMetricVisual, isRateMetric, pickSimplestMatch, TONE_HEX, HERO_PRIORITY } from "@/lib/metricVisuals";
 import { pickTimeDimension } from "@/lib/timeDimension";
 import { getDefaultAccount, setDefaultAccount } from "@/lib/defaultAccounts";
+import { isCurrencyMetric, formatCurrency } from "@/lib/currency";
 import { useAuthStore } from "@/store/authStore";
 import { useViewAsStore } from "@/store/viewAsStore";
 
@@ -153,7 +154,7 @@ function pickHeroMetrics(fields: RnField[], totals: Map<string, number>, count: 
 
 export default function IntegrationDetail() {
   const { integrationId = "" } = useParams<{ integrationId: string }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const visual = getIntegrationVisual(integrationId);
 
   const [connectionKey, setConnectionKey] = useState("");
@@ -221,6 +222,17 @@ export default function IntegrationDetail() {
         description: c.connection_name !== a.account_name ? c.connection_name : undefined,
       }))
     ) ?? [];
+
+  // The account's real currency (as reported by the integration itself, not
+  // assumed) — cost/spend/value metrics render in this currency everywhere
+  // on the page instead of as bare numbers.
+  const selectedCurrency = connections
+    ?.flatMap((c) => c.accounts)
+    .find((a) => a.account_id === accountId)?.currency;
+  const formatMetricValue = (fieldName: string, value: number) =>
+    isCurrencyMetric(fieldName)
+      ? formatCurrency(value, selectedCurrency, i18n.language)
+      : value.toLocaleString(i18n.language, { maximumFractionDigits: 2 });
 
   // Auto-select an account once the list has loaded: the one remembered
   // from last time this integration was opened (scoped per tenant), or —
@@ -405,7 +417,11 @@ export default function IntegrationDetail() {
         type: "bars",
         key: group.key,
         title: t("integrations.topBreakdownOf", { name: group.label }),
-        items: group.members.map((f) => ({ label: f.field_name, value: totalFor(f.field_id) })),
+        items: group.members.map((f) => ({
+          label: f.field_name,
+          value: totalFor(f.field_id),
+          displayValue: formatMetricValue(f.field_name, totalFor(f.field_id)),
+        })),
       })
     ),
   ];
@@ -498,9 +514,7 @@ export default function IntegrationDetail() {
                   <HeroMetricCard
                     key={field.field_id}
                     label={field.field_name}
-                    value={(totalsById.get(field.field_id) ?? 0).toLocaleString(undefined, {
-                      maximumFractionDigits: 2,
-                    })}
+                    value={formatMetricValue(field.field_name, totalsById.get(field.field_id) ?? 0)}
                     icon={Icon}
                     tone={tone}
                     variant={i === 0 ? "solid" : "light"}
@@ -540,7 +554,15 @@ export default function IntegrationDetail() {
                 ))}
               </div>
             </div>
-            <RevenueChart data={primaryChartData} shape={chartShape} />
+            <RevenueChart
+              data={primaryChartData}
+              shape={chartShape}
+              valueFormatter={
+                isCurrencyMetric(chartMetricField?.field_name ?? effectiveChartMetric)
+                  ? (v) => formatCurrency(v, selectedCurrency, i18n.language)
+                  : undefined
+              }
+            />
             <p className="mt-2 text-xs text-slate-400">{t("integrations.dateRangeAppliesToAll")}</p>
           </div>
 
@@ -631,7 +653,7 @@ export default function IntegrationDetail() {
                 <GlowCard
                   key={field.field_id}
                   label={field.field_name}
-                  value={value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  value={formatMetricValue(field.field_name, value)}
                   icon={<Icon size={16} />}
                   accent={tone ?? GRID_ACCENTS[i % GRID_ACCENTS.length]}
                   footer={footer}
