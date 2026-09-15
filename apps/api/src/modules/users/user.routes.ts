@@ -15,3 +15,4 @@ userRouter.get("/creatable-roles", userController.creatableRoles);
 const canManageUsers = requireRole("SUPER_ADMIN", "AGENCY_OWNER", "AGENCY_STAFF", "TENANT_OWNER");
 userRouter.post("/", canManageUsers, userController.create);
 userRouter.patch("/:userId", canManageUsers, userController.update);
+userRouter.delete("/:userId", canManageUsers, userController.remove);

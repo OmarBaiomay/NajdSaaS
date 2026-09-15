@@ -18,4 +18,6 @@ export const updateUserSchema = z.object({
   role: z.enum(ASSIGNABLE_ROLES).optional(),
   firstName: z.string().max(60).optional(),
   lastName: z.string().max(60).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(8).max(128).optional(),
 });

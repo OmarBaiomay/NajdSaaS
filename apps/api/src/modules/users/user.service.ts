@@ -81,17 +81,22 @@ export async function createUser(
   });
 }
 
-export async function updateUser(
-  actor: Actor,
-  targetUserId: string,
-  patch: { isActive?: boolean; role?: Role; firstName?: string; lastName?: string }
-) {
+async function assertManageable(actor: Actor, targetUserId: string) {
   const target = await prisma.user.findFirst({ where: { id: targetUserId, agencyId: actor.agencyId } });
   if (!target) throw ApiError.notFound("User not found");
 
   if (actor.role === "TENANT_OWNER" && target.tenantId !== actor.tenantId) {
     throw ApiError.forbidden("Cannot manage a user outside your tenant");
   }
+  return target;
+}
+
+export async function updateUser(
+  actor: Actor,
+  targetUserId: string,
+  patch: { isActive?: boolean; role?: Role; firstName?: string; lastName?: string; email?: string; password?: string }
+) {
+  const target = await assertManageable(actor, targetUserId);
 
   if (target.id === actor.userId && patch.isActive === false) {
     throw ApiError.badRequest("You cannot deactivate your own account", "CANNOT_SELF_DEACTIVATE");
@@ -105,5 +110,38 @@ export async function updateUser(
     if (!allowed.includes(patch.role)) throw ApiError.forbidden(`You cannot assign role ${patch.role}`);
   }
 
-  return prisma.user.update({ where: { id: target.id }, data: patch, select: USER_SELECT });
+  const data: Record<string, unknown> = {
+    isActive: patch.isActive,
+    role: patch.role,
+    firstName: patch.firstName,
+    lastName: patch.lastName,
+  };
+
+  if (patch.email) {
+    const email = patch.email.toLowerCase();
+    if (email !== target.email) {
+      const existing = await prisma.user.findUnique({
+        where: { agencyId_email: { agencyId: actor.agencyId, email } },
+      });
+      if (existing) throw ApiError.conflict("A user with this email already exists in your agency");
+      data.email = email;
+    }
+  }
+
+  if (patch.password) {
+    data.passwordHash = await hashPassword(patch.password);
+  }
+
+  return prisma.user.update({ where: { id: target.id }, data, select: USER_SELECT });
+}
+
+export async function deleteUser(actor: Actor, targetUserId: string) {
+  const target = await assertManageable(actor, targetUserId);
+
+  if (target.id === actor.userId) throw ApiError.badRequest("You cannot delete your own account", "CANNOT_SELF_DELETE");
+  if (target.role === "AGENCY_OWNER" || target.role === "SUPER_ADMIN") {
+    throw ApiError.forbidden("Cannot delete this user");
+  }
+
+  await prisma.user.delete({ where: { id: target.id } });
 }

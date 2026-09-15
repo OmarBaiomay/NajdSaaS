@@ -43,8 +43,14 @@ export interface UpdateUserInput {
   role?: AssignableRole;
   firstName?: string;
   lastName?: string;
+  email?: string;
+  password?: string;
 }
 export async function updateUser(userId: string, input: UpdateUserInput) {
   const { data } = await api.patch<{ user: AppUser }>(`/users/${userId}`, input);
   return data.user;
+}
+
+export async function deleteUser(userId: string) {
+  await api.delete(`/users/${userId}`);
 }

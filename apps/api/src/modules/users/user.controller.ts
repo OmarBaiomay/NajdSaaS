@@ -32,3 +32,8 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
   const user = await userService.updateUser(actorFrom(req), req.params.userId!, input);
   res.json({ user });
 });
+
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  await userService.deleteUser(actorFrom(req), req.params.userId!);
+  res.json({ ok: true });
+});

@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { UserPlus, X } from "lucide-react";
+import { UserPlus, Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
-import { listUsers, createUser, updateUser, getCreatableRoles, type AssignableRole } from "@/lib/users";
+import {
+  listUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getCreatableRoles,
+  type AppUser,
+  type AssignableRole,
+} from "@/lib/users";
 import { listTenants } from "@/lib/tenants";
 import { useAuthStore, isAgencyLevel, type Role } from "@/store/authStore";
 
@@ -18,7 +27,14 @@ const ROLE_BADGE: Record<Role, string> = {
   TENANT_MEMBER: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 
-const EMPTY_FORM = { firstName: "", lastName: "", email: "", password: "", role: "" as AssignableRole | "", tenantId: "" };
+const EMPTY_CREATE_FORM = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  password: "",
+  role: "" as AssignableRole | "",
+  tenantId: "",
+};
 
 export default function Users() {
   const { t } = useTranslation();
@@ -26,198 +42,316 @@ export default function Users() {
   const currentUserId = useAuthStore((s) => s.user?.userId);
   const authRole = useAuthStore((s) => s.user?.role);
 
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [editForm, setEditForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "" as Role | "" });
+  const [editError, setEditError] = useState<string | null>(null);
 
   const { data: users, isLoading } = useQuery({ queryKey: ["users"], queryFn: listUsers });
   const { data: creatableRoles } = useQuery({ queryKey: ["users-creatable-roles"], queryFn: getCreatableRoles });
-  const { data: tenants } = useQuery({
-    queryKey: ["tenants"],
-    queryFn: listTenants,
-    enabled: isAgencyLevel(authRole),
-  });
-  const tenantName = (tenantId: string | null) => tenants?.find((t) => t.id === tenantId)?.name ?? null;
+  const { data: tenants } = useQuery({ queryKey: ["tenants"], queryFn: listTenants, enabled: isAgencyLevel(authRole) });
+  const tenantName = (tenantId: string | null) => tenants?.find((tn) => tn.id === tenantId)?.name ?? null;
 
   const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ["users"] });
 
   const createMutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
-      setShowForm(false);
-      setForm(EMPTY_FORM);
-      setFormError(null);
+      setShowCreate(false);
+      setCreateForm(EMPTY_CREATE_FORM);
+      setCreateError(null);
       invalidateUsers();
     },
-    onError: (err) => {
-      const message = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
-        ?.message;
-      setFormError(message ?? t("users.createFailed"));
-    },
+    onError: (err) => setCreateError(extractErrorMessage(err) ?? t("users.createFailed")),
   });
 
-  const updateMutation = useMutation({ mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateUser>[1] }) => updateUser(id, input), onSuccess: invalidateUsers });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateUser>[1] }) => updateUser(id, input),
+    onSuccess: invalidateUsers,
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof updateUser>[1] }) => updateUser(id, input),
+    onSuccess: () => {
+      setEditingUser(null);
+      setEditError(null);
+      invalidateUsers();
+    },
+    onError: (err) => setEditError(extractErrorMessage(err) ?? t("users.saveFailed")),
+  });
+
+  const deleteMutation = useMutation({ mutationFn: deleteUser, onSuccess: invalidateUsers });
 
   const canManage = (creatableRoles?.length ?? 0) > 0;
   const roleOptions: SearchableOption[] = (creatableRoles ?? []).map((r) => ({ value: r, label: t(`users.role.${r}`) }));
   const tenantOptions: SearchableOption[] = (tenants ?? []).map((tn) => ({ value: tn.id, label: tn.name }));
-  const needsTenant = (form.role === "TENANT_OWNER" || form.role === "TENANT_MEMBER") && isAgencyLevel(authRole);
+  const needsTenant = (createForm.role === "TENANT_OWNER" || createForm.role === "TENANT_MEMBER") && isAgencyLevel(authRole);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.role) return;
+    if (!createForm.role) return;
     createMutation.mutate({
-      email: form.email,
-      password: form.password,
-      firstName: form.firstName || undefined,
-      lastName: form.lastName || undefined,
-      role: form.role,
-      tenantId: needsTenant ? form.tenantId || undefined : undefined,
+      email: createForm.email,
+      password: createForm.password,
+      firstName: createForm.firstName || undefined,
+      lastName: createForm.lastName || undefined,
+      role: createForm.role,
+      tenantId: needsTenant ? createForm.tenantId || undefined : undefined,
     });
+  };
+
+  const openEdit = (u: AppUser) => {
+    setEditingUser(u);
+    setEditForm({ firstName: u.firstName ?? "", lastName: u.lastName ?? "", email: u.email, password: "", role: u.role });
+    setEditError(null);
+  };
+
+  const handleEditSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    const canEditRole = editingUser.role !== "AGENCY_OWNER" && editingUser.role !== "SUPER_ADMIN" && canManage;
+    editMutation.mutate({
+      id: editingUser.id,
+      input: {
+        firstName: editForm.firstName || undefined,
+        lastName: editForm.lastName || undefined,
+        email: editForm.email !== editingUser.email ? editForm.email : undefined,
+        password: editForm.password || undefined,
+        role: canEditRole && editForm.role !== editingUser.role ? (editForm.role as AssignableRole) : undefined,
+      },
+    });
+  };
+
+  const handleDelete = (u: AppUser) => {
+    const displayName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email;
+    if (window.confirm(t("users.confirmDelete", { name: displayName }))) {
+      deleteMutation.mutate(u.id);
+    }
   };
 
   return (
     <div className="space-y-6">
       {canManage && (
         <div className="flex justify-end">
-          <Button onClick={() => setShowForm((v) => !v)}>
-            {showForm ? <X size={16} /> : <UserPlus size={16} />}
-            {showForm ? t("common.cancel") : t("users.addUser")}
+          <Button onClick={() => setShowCreate(true)}>
+            <UserPlus size={16} />
+            {t("users.addUser")}
           </Button>
         </div>
       )}
 
-      {showForm && (
-        <Card>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {showCreate && (
+        <Modal title={t("users.addUser")} onClose={() => setShowCreate(false)}>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">{t("users.firstName")}</label>
               <input
-                value={form.firstName}
-                onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+                value={createForm.firstName}
+                onChange={(e) => setCreateForm((f) => ({ ...f, firstName: e.target.value }))}
                 className="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">{t("users.lastName")}</label>
               <input
-                value={form.lastName}
-                onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+                value={createForm.lastName}
+                onChange={(e) => setCreateForm((f) => ({ ...f, lastName: e.target.value }))}
                 className="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-medium">{t("auth.email")}</label>
               <input
                 type="email"
                 required
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
                 className="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-medium">{t("auth.password")}</label>
               <PasswordInput
                 required
-                value={form.password}
-                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                value={createForm.password}
+                onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
               />
             </div>
             <SearchableSelect
               label={t("users.role.label")}
               placeholder={t("common.select")}
-              value={form.role}
-              onChange={(v) => setForm((f) => ({ ...f, role: v as AssignableRole, tenantId: "" }))}
+              value={createForm.role}
+              onChange={(v) => setCreateForm((f) => ({ ...f, role: v as AssignableRole, tenantId: "" }))}
               options={roleOptions}
             />
             {needsTenant && (
               <SearchableSelect
                 label={t("nav.tenants")}
                 placeholder={t("common.select")}
-                value={form.tenantId}
-                onChange={(v) => setForm((f) => ({ ...f, tenantId: v }))}
+                value={createForm.tenantId}
+                onChange={(v) => setCreateForm((f) => ({ ...f, tenantId: v }))}
                 options={tenantOptions}
               />
             )}
 
             <div className="sm:col-span-2">
-              {formError && <p className="mb-2 text-sm text-red-500">{formError}</p>}
-              <Button type="submit" disabled={createMutation.isPending || !form.role || (needsTenant && !form.tenantId)}>
+              {createError && <p className="mb-2 text-sm text-red-500">{createError}</p>}
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || !createForm.role || (needsTenant && !createForm.tenantId)}
+              >
                 {createMutation.isPending ? t("users.creating") : t("users.createUser")}
               </Button>
             </div>
           </form>
-        </Card>
+        </Modal>
       )}
 
-      <Card className="overflow-hidden !p-0">
+      {editingUser && (
+        <Modal title={t("users.editUser")} onClose={() => setEditingUser(null)}>
+          <form onSubmit={handleEditSave} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t("users.firstName")}</label>
+              <input
+                value={editForm.firstName}
+                onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
+                className="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t("users.lastName")}</label>
+              <input
+                value={editForm.lastName}
+                onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
+                className="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium">{t("auth.email")}</label>
+              <input
+                type="email"
+                required
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                className="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium">{t("users.newPassword")}</label>
+              <PasswordInput
+                value={editForm.password}
+                onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder={t("users.newPasswordHint")}
+              />
+            </div>
+            {editingUser.role !== "AGENCY_OWNER" && editingUser.role !== "SUPER_ADMIN" && canManage && (
+              <SearchableSelect
+                label={t("users.role.label")}
+                value={editForm.role}
+                onChange={(v) => setEditForm((f) => ({ ...f, role: v as Role }))}
+                options={[
+                  { value: editingUser.role, label: t(`users.role.${editingUser.role}`) },
+                  ...(creatableRoles ?? [])
+                    .filter((r) => r !== editingUser.role)
+                    .map((r) => ({ value: r, label: t(`users.role.${r}`) })),
+                ]}
+              />
+            )}
+
+            <div className="sm:col-span-2">
+              {editError && <p className="mb-2 text-sm text-red-500">{editError}</p>}
+              <Button type="submit" disabled={editMutation.isPending}>
+                {editMutation.isPending ? "…" : t("common.save")}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      <Card className="overflow-x-auto !p-0">
         {isLoading && <p className="p-5 text-sm text-slate-400">{t("common.loading")}</p>}
         {!isLoading && users?.length === 0 && <p className="p-5 text-sm text-slate-500">{t("users.noUsers")}</p>}
 
         {!isLoading && (users?.length ?? 0) > 0 && (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {users!.map((u) => {
-              const isSelf = u.id === currentUserId;
-              const displayName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email;
-              const canEditRole = canManage && u.role !== "AGENCY_OWNER" && u.role !== "SUPER_ADMIN";
-              return (
-                <div key={u.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-slate-900 dark:text-white">
-                      {displayName} {isSelf && <span className="text-xs text-slate-400">({t("users.you")})</span>}
-                    </p>
-                    <p className="truncate text-sm text-slate-500">{u.email}</p>
-                    {isAgencyLevel(authRole) && tenantName(u.tenantId) && (
-                      <p className="text-xs text-slate-400">{tenantName(u.tenantId)}</p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {canEditRole ? (
-                      <SearchableSelect
-                        value={u.role}
-                        onChange={(role) => updateMutation.mutate({ id: u.id, input: { role: role as AssignableRole } })}
-                        options={[
-                          { value: u.role, label: t(`users.role.${u.role}`) },
-                          ...(creatableRoles ?? [])
-                            .filter((r) => r !== u.role)
-                            .map((r) => ({ value: r, label: t(`users.role.${r}`) })),
-                        ]}
-                        className="w-40"
-                      />
-                    ) : (
+          <table className="w-full min-w-[720px] text-start text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400 dark:border-slate-800">
+                <th className="px-4 py-3 text-start font-medium">{t("users.columnName")}</th>
+                <th className="px-4 py-3 text-start font-medium">{t("users.role.label")}</th>
+                {isAgencyLevel(authRole) && <th className="px-4 py-3 text-start font-medium">{t("nav.tenants")}</th>}
+                <th className="px-4 py-3 text-start font-medium">{t("users.columnStatus")}</th>
+                <th className="px-4 py-3 text-end font-medium">{t("users.columnActions")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {users!.map((u) => {
+                const isSelf = u.id === currentUserId;
+                const displayName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email;
+                const isProtected = u.role === "AGENCY_OWNER" || u.role === "SUPER_ADMIN";
+                return (
+                  <tr key={u.id}>
+                    <td className="max-w-[220px] px-4 py-3">
+                      <p className="truncate font-medium text-slate-900 dark:text-white">
+                        {displayName} {isSelf && <span className="text-xs text-slate-400">({t("users.you")})</span>}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">{u.email}</p>
+                    </td>
+                    <td className="px-4 py-3">
                       <span className={`rounded-full px-3 py-1 text-xs font-medium ${ROLE_BADGE[u.role]}`}>
                         {t(`users.role.${u.role}`)}
                       </span>
+                    </td>
+                    {isAgencyLevel(authRole) && (
+                      <td className="px-4 py-3 text-slate-500">{tenantName(u.tenantId) ?? "—"}</td>
                     )}
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        u.isActive
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                          : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                      }`}
-                    >
-                      {u.isActive ? t("users.active") : t("users.inactive")}
-                    </span>
-
-                    {canManage && !isSelf && (
-                      <Button
-                        variant="ghost"
+                    <td className="px-4 py-3">
+                      <button
+                        disabled={!canManage || isSelf}
                         onClick={() => updateMutation.mutate({ id: u.id, input: { isActive: !u.isActive } })}
-                        disabled={updateMutation.isPending}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-opacity ${
+                          u.isActive
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                            : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        } ${canManage && !isSelf ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
                       >
-                        {u.isActive ? t("users.deactivate") : t("users.activate")}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                        {u.isActive ? t("users.active") : t("users.inactive")}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openEdit(u)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800"
+                          aria-label={t("users.editUser")}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        {canManage && !isSelf && !isProtected && (
+                          <button
+                            onClick={() => handleDelete(u)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                            aria-label={t("users.deleteUser")}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </Card>
     </div>
   );
+}
+
+function extractErrorMessage(err: unknown): string | undefined {
+  return (err as { response?: { data?: { error?: { message?: string } } } } | undefined)?.response?.data?.error
+    ?.message;
 }
