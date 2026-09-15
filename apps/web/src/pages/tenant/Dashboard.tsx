@@ -112,10 +112,7 @@ export default function TenantDashboard() {
         <DateRangePicker label={t("integrations.dateRange")} value={dateRange} onChange={setDateRange} />
       </div>
 
-      {/* items-start: don't stretch every card to match the tallest one in
-          the row — a card with a longer label or a multi-currency footer
-          shouldn't leave dead space in its plain-number siblings. */}
-      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <GlowCard
           label={t("dashboard.connectedIntegrations")}
           value={connectedIntegrations?.length ?? (integrationsLoading ? "…" : 0)}
