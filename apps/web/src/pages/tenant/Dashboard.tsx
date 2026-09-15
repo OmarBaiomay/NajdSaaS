@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -5,6 +6,7 @@ import { Plug, Building2, Wallet, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
+import { DateRangePicker, dateRangeLabel, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { DashboardBackdrop } from "@/components/layout/DashboardBackdrop";
 import {
   getIntegrationStatus,
@@ -49,13 +51,25 @@ export default function TenantDashboard() {
 
   const totalAccounts = connectedIntegrations?.reduce((sum, i) => sum + i.accountCount, 0) ?? 0;
 
-  // Cost/revenue across every connected integration's every account, last 30
-  // days — expensive (a /fields + /query per account), so cached for a while
-  // and only computed once the connected-integrations list is known.
+  const [dateRange, setDateRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE);
+  const dateRangeReady = dateRange.preset !== "custom" || (!!dateRange.start && !!dateRange.end);
+
+  // Cost/revenue across every connected integration's every account, for the
+  // selected date range — expensive (a /fields + /query per account), so
+  // cached for a while and only computed once the connected-integrations
+  // list and a usable date range are both known.
   const { data: financials, isLoading: financialsLoading } = useQuery({
-    queryKey: ["dashboard-financials", connectedIntegrations?.map((i) => i.id).join(",")],
-    queryFn: () => getDashboardFinancials(connectedIntegrations!.map((i) => ({ id: i.id, name: i.name }))),
-    enabled: (connectedIntegrations?.length ?? 0) > 0,
+    queryKey: [
+      "dashboard-financials",
+      connectedIntegrations?.map((i) => i.id).join(","),
+      JSON.stringify(dateRange),
+    ],
+    queryFn: () =>
+      getDashboardFinancials(
+        connectedIntegrations!.map((i) => ({ id: i.id, name: i.name })),
+        dateRange as unknown as Record<string, unknown>
+      ),
+    enabled: (connectedIntegrations?.length ?? 0) > 0 && dateRangeReady,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -91,7 +105,17 @@ export default function TenantDashboard() {
 
   return (
     <DashboardBackdrop>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <p className="text-xs text-slate-400">
+          {t("dashboard.financialsHint", { range: dateRangeLabel(dateRange, t) })}
+        </p>
+        <DateRangePicker label={t("integrations.dateRange")} value={dateRange} onChange={setDateRange} />
+      </div>
+
+      {/* items-start: don't stretch every card to match the tallest one in
+          the row — a card with a longer label or a multi-currency footer
+          shouldn't leave dead space in its plain-number siblings. */}
+      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <GlowCard
           label={t("dashboard.connectedIntegrations")}
           value={connectedIntegrations?.length ?? (integrationsLoading ? "…" : 0)}
@@ -133,8 +157,6 @@ export default function TenantDashboard() {
           loading={financialsLoading}
         />
       </div>
-
-      <p className="text-xs text-slate-400">{t("dashboard.financialsHint")}</p>
 
       {integrationsLoading && <p className="text-sm text-slate-400">{t("common.loading")}</p>}
 

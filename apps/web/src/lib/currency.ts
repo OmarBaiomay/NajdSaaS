@@ -1,3 +1,5 @@
+import { CURRENCY_SYMBOL_MAP } from "./currencySymbolMap";
+
 // Keyword heuristic, same style as the icon/tone matching in metricVisuals —
 // Reporting Ninja doesn't expose a "this field is money" flag, so we infer
 // it from the name. Explicitly excludes ratios/percentages that happen to
@@ -24,23 +26,37 @@ export function formatPlainAmount(value: number, locale: string): string {
 }
 
 /** Formats a monetary value using the connected account's real currency
- * (from Reporting Ninja) rather than assuming USD. Falls back to a plain
- * number — with the raw currency code appended — if the account's currency
- * isn't known yet or isn't a currency Intl recognizes. */
+ * (from Reporting Ninja) rather than assuming USD.
+ *
+ * Intl.NumberFormat has no symbol data for a lot of real-world currencies
+ * (AED, KWD, and plenty more) and silently falls back to printing the bare
+ * ISO code instead — exactly the "text, not a symbol" problem. So: ask Intl
+ * first, and if it actually produced a symbol, use it; if it just echoed
+ * the code back, fall through to CURRENCY_SYMBOL_MAP instead. Only when
+ * neither has anything does the code itself show up. */
 export function formatCurrency(value: number, currencyCode: string | undefined, locale: string): string {
   if (!currencyCode) {
     return value.toLocaleString(locale, { maximumFractionDigits: 2 });
   }
+  const code = currencyCode.toUpperCase();
+  const number = formatPlainAmount(value, locale);
+
   try {
     // narrowSymbol prefers the plain symbol ("$") over a verbose form like
-    // "US$" where locale data offers both — the point is a symbol, not text.
-    return new Intl.NumberFormat(locale, {
+    // "US$" where locale data offers both.
+    const formatter = new Intl.NumberFormat(locale, {
       style: "currency",
-      currency: currencyCode,
+      currency: code,
       currencyDisplay: "narrowSymbol",
       maximumFractionDigits: 2,
-    }).format(value);
+    });
+    const currencyPart = formatter.formatToParts(value).find((p) => p.type === "currency")?.value;
+    const gotRealSymbol = currencyPart && currencyPart.toUpperCase() !== code;
+
+    if (gotRealSymbol) return formatter.format(value);
+    if (CURRENCY_SYMBOL_MAP[code]) return `${CURRENCY_SYMBOL_MAP[code]} ${number}`;
+    return formatter.format(value); // no fallback available — the code is genuinely all we have
   } catch {
-    return `${value.toLocaleString(locale, { maximumFractionDigits: 2 })} ${currencyCode}`;
+    return CURRENCY_SYMBOL_MAP[code] ? `${CURRENCY_SYMBOL_MAP[code]} ${number}` : `${number} ${currencyCode}`;
   }
 }

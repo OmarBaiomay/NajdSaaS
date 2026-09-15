@@ -52,12 +52,16 @@ export interface IntegrationFinancials {
 
 /**
  * Sums cost/revenue for one integration across every one of its connected
- * accounts, over the last 30 days. Grouped by currency rather than blended
- * into one number — accounts under the very same integration can (and, on
- * this tenant's real data, do) run in different currencies, so adding them
- * together directly would silently produce a meaningless total.
+ * accounts, over the given date range. Grouped by currency rather than
+ * blended into one number — accounts under the very same integration can
+ * (and, on this tenant's real data, do) run in different currencies, so
+ * adding them together directly would silently produce a meaningless total.
  */
-async function getIntegrationFinancials(integrationId: string, name: string): Promise<IntegrationFinancials> {
+async function getIntegrationFinancials(
+  integrationId: string,
+  name: string,
+  dateRange: Record<string, unknown>
+): Promise<IntegrationFinancials> {
   const empty: IntegrationFinancials = { integrationId, name, byCurrency: [], hasCost: false, hasRevenue: false };
 
   const [detail, connections] = await Promise.all([
@@ -103,7 +107,7 @@ async function getIntegrationFinancials(integrationId: string, name: string): Pr
           ...(dataView ? { data_view: dataView } : {}),
           ...(settings ? { settings } : {}),
           fields: [dimensionField, ...queryFields],
-          date_range: { preset: "lastxdays", x: 30 },
+          date_range: dateRange,
           limit: 500,
         });
 
@@ -144,10 +148,11 @@ export interface DashboardFinancials {
 /** Runs the per-integration financials for every connected integration in
  * parallel and rolls them up into a grand total, still grouped by currency. */
 export async function getDashboardFinancials(
-  connectedIntegrations: { id: string; name: string }[]
+  connectedIntegrations: { id: string; name: string }[],
+  dateRange: Record<string, unknown>
 ): Promise<DashboardFinancials> {
   const perIntegration = await Promise.all(
-    connectedIntegrations.map((i) => getIntegrationFinancials(i.id, i.name))
+    connectedIntegrations.map((i) => getIntegrationFinancials(i.id, i.name, dateRange))
   );
 
   const grand = new Map<string, { cost: number; revenue: number }>();
