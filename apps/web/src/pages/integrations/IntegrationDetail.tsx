@@ -13,6 +13,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
+import { LoadingBar } from "@/components/ui/LoadingBar";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, dateRangeLabel, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { RevenueChart, type ChartShape } from "@/components/charts/RevenueChart";
@@ -68,6 +69,22 @@ export function extractApiErrorMessage(err: unknown): string | undefined {
   return (err.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
 }
 
+// On failure, split into this many pieces (not just 2) — since sibling
+// pieces are all fetched concurrently, wall-clock time is driven by
+// recursion *depth*, not total call count. Widening the fan-out from 2 to
+// 8 cuts a large field list's worst-case depth from ~log2(N) to ~log8(N)
+// (e.g. 250 fields: 8 rounds → 3), which is the actual "why is this slow"
+// fix — most of those 8 rounds in the old binary approach were spent on
+// batches doomed to fail again, not making real progress.
+const SPLIT_FACTOR = 8;
+
+function splitInto<T>(items: T[], parts: number): T[][] {
+  const size = Math.ceil(items.length / parts);
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
 async function fetchMetricsBisecting(
   fields: string[],
   runOne: (fields: string[]) => Promise<Record<string, string | number>[]>,
@@ -84,17 +101,20 @@ async function fetchMetricsBisecting(
   } catch (err) {
     if (isNonSplittableError(err)) throw err;
     if (fields.length === 1) return { rows: [], unavailable: fields };
-    const mid = Math.ceil(fields.length / 2);
-    const [a, b] = await Promise.all([
-      fetchMetricsBisecting(fields.slice(0, mid), runOne, dimensionField, callBudget),
-      fetchMetricsBisecting(fields.slice(mid), runOne, dimensionField, callBudget),
-    ]);
+
+    const groups = splitInto(fields, Math.min(SPLIT_FACTOR, fields.length));
+    const results = await Promise.all(groups.map((g) => fetchMetricsBisecting(g, runOne, dimensionField, callBudget)));
+
     const merged = new Map<string, Record<string, string | number>>();
-    for (const row of [...a.rows, ...b.rows]) {
-      const key = String(row[dimensionField]);
-      merged.set(key, { ...merged.get(key), ...row });
+    const unavailable: string[] = [];
+    for (const result of results) {
+      for (const row of result.rows) {
+        const key = String(row[dimensionField]);
+        merged.set(key, { ...merged.get(key), ...row });
+      }
+      unavailable.push(...result.unavailable);
     }
-    return { rows: Array.from(merged.values()), unavailable: [...a.unavailable, ...b.unavailable] };
+    return { rows: Array.from(merged.values()), unavailable };
   }
 }
 
@@ -271,6 +291,7 @@ export default function IntegrationDetail() {
 
   const rows = queryResult?.rows;
   const hasData = !!queryResult; // the query has resolved at least once (vs. the pre-account skeleton)
+  const isFirstLoad = queryLoading && !hasData; // show skeletons only before any real data has ever arrived
 
   const sortedRows = useMemo(
     () => (rows ?? []).slice().sort((a, b) => String(a[dimensionField]).localeCompare(String(b[dimensionField]))),
@@ -456,7 +477,12 @@ export default function IntegrationDetail() {
           {!accountId && (
             <p className="text-xs text-slate-400">{t("integrations.chooseAccountHint")}</p>
           )}
-          {queryLoading && <p className="text-xs text-slate-400">{t("integrations.updatingData")}</p>}
+          {queryLoading && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-slate-400">{t("integrations.updatingData")}</p>
+              <LoadingBar />
+            </div>
+          )}
           {!queryLoading && (queryResult?.unavailable.length ?? 0) > 0 && (
             <p className="text-xs text-slate-400">
               {t("integrations.someMetricsUnavailable", { count: queryResult!.unavailable.length })}
@@ -479,6 +505,7 @@ export default function IntegrationDetail() {
                     tone={tone}
                     variant={i === 0 ? "solid" : "light"}
                     footer={series.some((v) => v !== 0) ? <Sparkline data={series} /> : undefined}
+                    loading={isFirstLoad}
                   />
                 );
               })}
@@ -608,6 +635,7 @@ export default function IntegrationDetail() {
                   icon={<Icon size={16} />}
                   accent={tone ?? GRID_ACCENTS[i % GRID_ACCENTS.length]}
                   footer={footer}
+                  loading={isFirstLoad}
                 />
               );
             })}

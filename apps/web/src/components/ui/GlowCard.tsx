@@ -33,6 +33,7 @@ export function GlowCard({
   accent = "brand",
   className,
   footer,
+  loading,
 }: {
   label: string;
   value: ReactNode;
@@ -41,6 +42,9 @@ export function GlowCard({
   accent?: GlowAccent;
   className?: string;
   footer?: ReactNode;
+  /** First-load only — shows a pulsing skeleton instead of the value/footer
+   * so an empty account and "still fetching" never look identical. */
+  loading?: boolean;
 }) {
   return (
     <div className={clsx("group relative rounded-2xl p-[1px]", className)}>
@@ -56,13 +60,22 @@ export function GlowCard({
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
           {icon && <span className="text-lg opacity-70">{icon}</span>}
         </div>
-        <p className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{value}</p>
-        {delta && (
-          <p className={clsx("mt-1 text-xs font-medium", delta.positive ? "text-emerald-500" : "text-red-500")}>
-            {delta.positive ? "▲" : "▼"} {delta.value}
-          </p>
+        {loading ? (
+          <>
+            <div className="mt-3 h-7 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+            <div className="mt-3 h-10 w-full animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+          </>
+        ) : (
+          <>
+            <p className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{value}</p>
+            {delta && (
+              <p className={clsx("mt-1 text-xs font-medium", delta.positive ? "text-emerald-500" : "text-red-500")}>
+                {delta.positive ? "▲" : "▼"} {delta.value}
+              </p>
+            )}
+            {footer && <div className="mt-2 -mx-1">{footer}</div>}
+          </>
         )}
-        {footer && <div className="mt-2 -mx-1">{footer}</div>}
       </div>
     </div>
   );

@@ -8,6 +8,15 @@ export default {
       fontFamily: {
         sans: ["Cairo", "Inter", "system-ui", "sans-serif"],
       },
+      keyframes: {
+        "loading-sweep": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(300%)" },
+        },
+      },
+      animation: {
+        "loading-sweep": "loading-sweep 1.2s ease-in-out infinite",
+      },
       colors: {
         brand: {
           50: "#eef6ff",

@@ -25,6 +25,7 @@ export function HeroMetricCard({
   tone,
   variant = "light",
   footer,
+  loading,
 }: {
   label: string;
   value: ReactNode;
@@ -32,6 +33,8 @@ export function HeroMetricCard({
   tone: MetricTone;
   variant?: "light" | "solid";
   footer?: ReactNode;
+  /** First-load only — pulsing skeleton instead of the value/footer. */
+  loading?: boolean;
 }) {
   if (variant === "solid") {
     return (
@@ -42,8 +45,17 @@ export function HeroMetricCard({
             <Icon size={16} />
           </span>
         </div>
-        <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
-        {footer && <div className="mt-2 -mx-1 opacity-90">{footer}</div>}
+        {loading ? (
+          <>
+            <div className="mt-3 h-7 w-20 animate-pulse rounded bg-white/15" />
+            <div className="mt-3 h-10 w-full animate-pulse rounded bg-white/10" />
+          </>
+        ) : (
+          <>
+            <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
+            {footer && <div className="mt-2 -mx-1 opacity-90">{footer}</div>}
+          </>
+        )}
       </div>
     );
   }
@@ -58,8 +70,17 @@ export function HeroMetricCard({
           {label}
         </p>
       </div>
-      <p className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{value}</p>
-      {footer && <div className="mt-2 -mx-1">{footer}</div>}
+      {loading ? (
+        <>
+          <div className="mt-3 h-7 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+          <div className="mt-3 h-10 w-full animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{value}</p>
+          {footer && <div className="mt-2 -mx-1">{footer}</div>}
+        </>
+      )}
     </div>
   );
 }
