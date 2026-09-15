@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { AppearanceCard } from "@/components/settings/AppearanceCard";
 import { clsx } from "@/lib/clsx";
 import {
   getIntegrationStatus,
@@ -122,6 +123,8 @@ export default function IntegrationSettings() {
           </div>
         )}
       </Card>
+
+      <AppearanceCard />
     </div>
   );
 }

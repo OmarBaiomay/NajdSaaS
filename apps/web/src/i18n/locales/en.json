@@ -112,6 +112,20 @@
     "dark": "Dark",
     "system": "System"
   },
+  "appearance": {
+    "title": "Appearance",
+    "subtitle": "Choose how the dashboard looks — mode and accent color apply everywhere, for this browser.",
+    "mode": "Mode",
+    "accentColor": "Accent color",
+    "accents": {
+      "blue": "Blue",
+      "violet": "Violet",
+      "emerald": "Emerald",
+      "sky": "Sky",
+      "rose": "Rose",
+      "amber": "Amber"
+    }
+  },
   "language": { "en": "English", "ar": "Arabic" },
   "dateRange": {
     "today": "Today",

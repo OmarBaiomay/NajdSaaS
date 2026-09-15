@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { AppearanceCard } from "@/components/settings/AppearanceCard";
 import { getMyAgency, updateMyAgency } from "@/lib/agencies";
 
 export default function AgencySettings() {
@@ -84,6 +85,8 @@ export default function AgencySettings() {
           </div>
         </form>
       </Card>
+
+      <AppearanceCard />
     </div>
   );
 }
