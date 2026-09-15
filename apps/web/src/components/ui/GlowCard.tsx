@@ -47,7 +47,7 @@ export function GlowCard({
   loading?: boolean;
 }) {
   return (
-    <div className={clsx("group relative rounded-2xl p-[1px]", className)}>
+    <div className={clsx("group relative h-full rounded-2xl p-[1px]", className)}>
       <div
         className={clsx(
           "absolute inset-0 rounded-2xl bg-gradient-to-br opacity-70 transition-opacity duration-300 group-hover:opacity-100",
@@ -55,7 +55,11 @@ export function GlowCard({
         )}
         aria-hidden
       />
-      <div className="relative rounded-2xl bg-white/80 p-5 backdrop-blur-xl dark:bg-slate-900/80">
+      {/* h-full + flex-col: the grid stretches the outer wrapper to match the
+          tallest card in the row, but that height only reaches this inner
+          card if it explicitly fills its parent too — otherwise it stays
+          sized to its own content and a gap opens up beneath it. */}
+      <div className="relative flex h-full flex-col rounded-2xl bg-white/80 p-5 backdrop-blur-xl dark:bg-slate-900/80">
         <div className="flex items-start justify-between">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
           {icon && <span className="text-lg opacity-70">{icon}</span>}
