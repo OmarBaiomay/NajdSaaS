@@ -69,6 +69,11 @@
     "showZeroMetrics": "Show {{count}} metrics with no data",
     "hideZeroMetrics": "Hide metrics with no data",
     "dateRangeAppliesToAll": "This date range applies to every card and chart on this page.",
+    "chartShape": {
+      "area": "Area chart",
+      "bar": "Bar chart",
+      "line": "Line chart"
+    },
     "searchMetrics": "Search metrics…",
     "breakdownOf": "{{name}} — completion breakdown",
     "ofTotal": "of {{total}} total",

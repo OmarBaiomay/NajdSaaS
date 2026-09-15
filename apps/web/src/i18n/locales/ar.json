@@ -73,6 +73,11 @@
     "showZeroMetrics": "إظهار {{count}} مقياسًا بلا بيانات",
     "hideZeroMetrics": "إخفاء المقاييس بلا بيانات",
     "dateRangeAppliesToAll": "ينطبق هذا النطاق الزمني على كل بطاقة ورسم بياني في هذه الصفحة.",
+    "chartShape": {
+      "area": "رسم مساحي",
+      "bar": "رسم بأعمدة",
+      "line": "رسم خطي"
+    },
     "searchMetrics": "ابحث عن مقياس…",
     "breakdownOf": "{{name}} — توزيع الإكمال",
     "ofTotal": "من إجمالي {{total}}",

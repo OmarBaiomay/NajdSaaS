@@ -3,15 +3,22 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  BarChart3,
+  AreaChart as AreaChartIcon,
+  LineChart as LineChartIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, dateRangeLabel, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
-import { RevenueChart } from "@/components/charts/RevenueChart";
+import { RevenueChart, type ChartShape } from "@/components/charts/RevenueChart";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { MiniBarChart } from "@/components/charts/MiniBarChart";
+import { MiniAreaChart } from "@/components/charts/MiniAreaChart";
 import { MiniProgressDonut } from "@/components/charts/MiniProgressDonut";
 import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
 import { TopMetricsBarList } from "@/components/charts/TopMetricsBarList";
@@ -148,6 +155,7 @@ export default function IntegrationDetail() {
 
   const [metricSearch, setMetricSearch] = useState("");
   const [chartMetric, setChartMetric] = useState("");
+  const [chartShape, setChartShape] = useState<ChartShape>("area");
   const [dateRange, setDateRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE);
   const dateRangeReady = dateRange.preset !== "custom" || (!!dateRange.start && !!dateRange.end);
 
@@ -161,6 +169,16 @@ export default function IntegrationDetail() {
   const needsDataView = !!dataViews && dataViews.length > 0;
   const dataViewOptions: SearchableOption[] = dataViews?.map((dv) => ({ value: dv.id, label: dv.name })) ?? [];
   const dataViewReady = !needsDataView || !!dataView;
+
+  // Default to whichever data view is literally called "Account" when the
+  // integration has one (the most broadly useful view for a first look) —
+  // otherwise the first one offered — instead of making every visit start
+  // with an empty required field.
+  useEffect(() => {
+    if (dataView || !dataViews || dataViews.length === 0) return;
+    const accountView = dataViews.find((dv) => /^account$/i.test(dv.name) || /^account$/i.test(dv.id));
+    setDataView((accountView ?? dataViews[0]).id);
+  }, [dataView, dataViews]);
 
   // Integrations that require account-level settings (e.g. facebook_ads'
   // attribution_window) expose them with a recommended_value — use that as
@@ -184,14 +202,15 @@ export default function IntegrationDetail() {
       }))
     ) ?? [];
 
-  // Auto-select the account remembered from last time this integration was
-  // opened (scoped per tenant), once the account list has loaded.
+  // Auto-select an account once the list has loaded: the one remembered
+  // from last time this integration was opened (scoped per tenant), or —
+  // so there's always something selected rather than an empty required
+  // field — simply the first account on offer.
   useEffect(() => {
     if (accountId || accountOptions.length === 0) return;
     const saved = getDefaultAccount(accountScope, integrationId);
-    if (saved && accountOptions.some((o) => o.value === saved)) {
-      selectAccount(saved, false);
-    }
+    const fallback = saved && accountOptions.some((o) => o.value === saved) ? saved : accountOptions[0].value;
+    selectAccount(fallback);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountOptions, accountScope, integrationId]);
 
@@ -467,10 +486,34 @@ export default function IntegrationDetail() {
           )}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="mb-4 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              {chartMetricField?.field_name ?? effectiveChartMetric} · {dateRangeLabel(dateRange, t)}
-            </h2>
-            <RevenueChart data={primaryChartData} />
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                {chartMetricField?.field_name ?? effectiveChartMetric} · {dateRangeLabel(dateRange, t)}
+              </h2>
+              <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
+                {(
+                  [
+                    { shape: "area", Icon: AreaChartIcon },
+                    { shape: "bar", Icon: BarChart3 },
+                    { shape: "line", Icon: LineChartIcon },
+                  ] as const
+                ).map(({ shape, Icon }) => (
+                  <button
+                    key={shape}
+                    onClick={() => setChartShape(shape)}
+                    aria-label={t(`integrations.chartShape.${shape}`)}
+                    className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                      chartShape === shape
+                        ? "bg-brand-600 text-white"
+                        : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <Icon size={14} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <RevenueChart data={primaryChartData} shape={chartShape} />
             <p className="mt-2 text-xs text-slate-400">{t("integrations.dateRangeAppliesToAll")}</p>
           </div>
 
@@ -539,8 +582,8 @@ export default function IntegrationDetail() {
 
               // A rate (CTR and friends) should be averaged across the
               // period, not summed — and reads better as a progress donut
-              // than a trend line. Everything else alternates line/bar so
-              // the grid isn't a wall of identical sparklines.
+              // than a trend line. Everything else rotates through
+              // line/bar/area so the grid isn't a wall of identical shapes.
               const average = series.length ? series.reduce((a, b) => a + b, 0) / series.length : 0;
               const value = rate ? average : totalsById.get(field.field_id) ?? 0;
 
@@ -549,10 +592,12 @@ export default function IntegrationDetail() {
                 footer = undefined;
               } else if (rate) {
                 footer = <MiniProgressDonut value={average} color={color} />;
-              } else if (i % 2 === 0) {
+              } else if (i % 3 === 0) {
                 footer = <Sparkline data={series} color={color} />;
-              } else {
+              } else if (i % 3 === 1) {
                 footer = <MiniBarChart data={series} color={color} />;
+              } else {
+                footer = <MiniAreaChart data={series} color={color} />;
               }
 
               return (
