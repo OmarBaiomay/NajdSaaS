@@ -32,9 +32,12 @@ export function formatCurrency(value: number, currencyCode: string | undefined, 
     return value.toLocaleString(locale, { maximumFractionDigits: 2 });
   }
   try {
+    // narrowSymbol prefers the plain symbol ("$") over a verbose form like
+    // "US$" where locale data offers both — the point is a symbol, not text.
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currencyCode,
+      currencyDisplay: "narrowSymbol",
       maximumFractionDigits: 2,
     }).format(value);
   } catch {

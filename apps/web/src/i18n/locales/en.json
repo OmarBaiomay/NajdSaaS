@@ -41,6 +41,13 @@
     "connectedIntegrations": "Connected Integrations",
     "totalAccounts": "Total Accounts",
     "noDataSources": "No data sources are connected yet in your Reporting Ninja account.",
+    "totalCost": "Total Cost",
+    "totalRevenue": "Total Revenue",
+    "financialsHint": "Cost and revenue are summed across every connected account, last 30 days — shown per currency where accounts differ.",
+    "costRevenueByIntegration": "Cost & revenue by integration",
+    "integration": "Integration",
+    "cost": "Cost",
+    "revenue": "Revenue",
     "accountCount_one": "{{count}} account",
     "accountCount_other": "{{count}} accounts"
   },
