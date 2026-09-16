@@ -35,6 +35,7 @@ import { pickTimeDimension } from "@/lib/timeDimension";
 import { pickCampaignDimension } from "@/lib/campaignDimension";
 import { estimateDateRangeDays } from "@/lib/dateRangeDays";
 import { getDefaultAccount, setDefaultAccount } from "@/lib/defaultAccounts";
+import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 import { isCurrencyMetric } from "@/lib/currency";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { useAuthStore } from "@/store/authStore";
@@ -71,10 +72,6 @@ function isNonSplittableError(err: unknown): boolean {
   return !!code && NON_SPLITTABLE_CODES.has(code);
 }
 
-export function extractApiErrorMessage(err: unknown): string | undefined {
-  if (!isAxiosError(err)) return undefined;
-  return (err.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
-}
 
 // On failure, split into this many pieces (not just 2) — since sibling
 // pieces are all fetched concurrently, wall-clock time is driven by

@@ -193,5 +193,21 @@
     "locale": "Default language",
     "saved": "Saved.",
     "saveFailed": "Could not save changes"
+  },
+  "ga4": {
+    "purchases": "Purchase",
+    "totalRevenue": "Total revenue",
+    "totalUsers": "Total users",
+    "sessions": "Sessions",
+    "sourceMediumTable": "Session source/medium",
+    "sourceMedium": "Session source/medium",
+    "eventCount": "Event count",
+    "eventValue": "Event value",
+    "searchSourceMedium": "Search source/medium…",
+    "noSourceMedium": "No session source/medium data for this range.",
+    "byCity": "Sessions by city",
+    "byItem": "Revenue by item",
+    "byCampaign": "Sessions by session campaign",
+    "others": "Others"
   }
 }

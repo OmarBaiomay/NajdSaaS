@@ -201,5 +201,21 @@
     "locale": "اللغة الافتراضية",
     "saved": "تم الحفظ.",
     "saveFailed": "تعذّر حفظ التغييرات"
+  },
+  "ga4": {
+    "purchases": "المشتريات",
+    "totalRevenue": "إجمالي الإيرادات",
+    "totalUsers": "إجمالي المستخدمين",
+    "sessions": "الجلسات",
+    "sourceMediumTable": "مصدر/وسيط الجلسة",
+    "sourceMedium": "مصدر/وسيط الجلسة",
+    "eventCount": "عدد الأحداث",
+    "eventValue": "قيمة الحدث",
+    "searchSourceMedium": "ابحث عن مصدر/وسيط…",
+    "noSourceMedium": "لا توجد بيانات مصدر/وسيط لهذا النطاق.",
+    "byCity": "الجلسات حسب المدينة",
+    "byItem": "الإيرادات حسب المنتج",
+    "byCampaign": "الجلسات حسب حملة الجلسة",
+    "others": "أخرى"
   }
 }

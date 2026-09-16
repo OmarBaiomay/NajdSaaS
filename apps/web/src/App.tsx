@@ -5,6 +5,7 @@ import Tenants from "@/pages/agency/Tenants";
 import TenantDashboard from "@/pages/tenant/Dashboard";
 import IntegrationsOverview from "@/pages/integrations/IntegrationsOverview";
 import IntegrationDetail from "@/pages/integrations/IntegrationDetail";
+import { CUSTOM_INTEGRATION_PAGES } from "@/pages/integrations/custom/registry";
 import IntegrationSettings from "@/pages/tenant/IntegrationSettings";
 import AgencySettings from "@/pages/agency/Settings";
 import Users from "@/pages/shared/Users";
@@ -18,6 +19,8 @@ import { AgencyTenantGate } from "@/routes/AgencyTenantGate";
 // integration starts with fresh account/data-view/metric selections.
 function IntegrationDetailRoute() {
   const { integrationId } = useParams<{ integrationId: string }>();
+  const CustomPage = integrationId ? CUSTOM_INTEGRATION_PAGES[integrationId] : undefined;
+  if (CustomPage) return <CustomPage key={integrationId} />;
   return <IntegrationDetail key={integrationId} />;
 }
 
