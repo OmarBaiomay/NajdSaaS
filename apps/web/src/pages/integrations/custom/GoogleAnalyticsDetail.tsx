@@ -222,7 +222,7 @@ export default function GoogleAnalyticsDetail() {
               {
                 id: "eventValue",
                 label: t("ga4.eventValue"),
-                render: (v) => <CurrencyAmount value={v} currencyCode={selectedCurrency} locale={i18n.language} />,
+                render: (v) => <CurrencyAmount value={Number(v)} currencyCode={selectedCurrency} locale={i18n.language} />,
               },
             ]}
             rows={sourceMediumRows ?? []}

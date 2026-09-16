@@ -231,5 +231,21 @@
     "costOverTime": "Cost",
     "conversionsOverTime": "Conversions",
     "roasOverTime": "ROAS"
+  },
+  "snapchatAds": {
+    "paidImpressions": "Paid impressions",
+    "spend": "Amount spent",
+    "purchases": "Purchases",
+    "purchaseRoas": "Purchase ROAS",
+    "campaignTable": "Campaigns",
+    "campaign": "Campaign name",
+    "adTable": "Ads",
+    "adName": "Ad name",
+    "adStatus": "Ad status",
+    "searchCampaigns": "Search campaigns…",
+    "searchAds": "Search ads…",
+    "noCampaigns": "No campaign data for this range.",
+    "noAds": "No ad data for this range.",
+    "roasOverTime": "Purchase ROAS"
   }
 }

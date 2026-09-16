@@ -7,7 +7,11 @@ import { LoadingBar } from "@/components/ui/LoadingBar";
 export interface BreakdownColumn {
   id: string;
   label: string;
-  render?: (value: number) => ReactNode;
+  /** "number" (default) reads the cell as a number for both sorting and the
+   * default renderer; "text" keeps it a string (e.g. "Ad status") — sorting
+   * still works for either via the same generic comparator below. */
+  type?: "number" | "text";
+  render?: (value: number | string) => ReactNode;
 }
 
 /**
@@ -28,6 +32,7 @@ export function BreakdownTable({
   emptyLabel,
   searchPlaceholder,
   pageSize = 20,
+  defaultSortField,
 }: {
   title: string;
   subtitle?: ReactNode;
@@ -39,13 +44,17 @@ export function BreakdownTable({
   emptyLabel: string;
   searchPlaceholder: string;
   pageSize?: number;
+  /** Which column sorts first by default — falls back to the first column,
+   * which isn't always right once a table has a leading text column (e.g.
+   * "Ad status") that shouldn't be what the table opens sorted by. */
+  defaultSortField?: string;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ field: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
 
-  const effectiveSort = sort ?? { field: columns[0]?.id ?? dimensionField, dir: "desc" as const };
+  const effectiveSort = sort ?? { field: defaultSortField ?? columns[0]?.id ?? dimensionField, dir: "desc" as const };
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -139,10 +148,10 @@ export function BreakdownTable({
                       {String(row[dimensionField] ?? "—")}
                     </td>
                     {columns.map((col) => {
-                      const value = Number(row[col.id]) || 0;
+                      const value = col.type === "text" ? String(row[col.id] ?? "—") : Number(row[col.id]) || 0;
                       return (
                         <td key={col.id} className="px-4 py-3">
-                          {col.render ? col.render(value) : value.toLocaleString()}
+                          {col.render ? col.render(value) : typeof value === "number" ? value.toLocaleString() : value}
                         </td>
                       );
                     })}

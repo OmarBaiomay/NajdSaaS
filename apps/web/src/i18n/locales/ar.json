@@ -239,5 +239,21 @@
     "costOverTime": "التكلفة",
     "conversionsOverTime": "التحويلات",
     "roasOverTime": "عائد الإنفاق الإعلاني"
+  },
+  "snapchatAds": {
+    "paidImpressions": "مرات الظهور المدفوعة",
+    "spend": "المبلغ المُنفق",
+    "purchases": "المشتريات",
+    "purchaseRoas": "عائد إنفاق المشتريات",
+    "campaignTable": "الحملات",
+    "campaign": "اسم الحملة",
+    "adTable": "الإعلانات",
+    "adName": "اسم الإعلان",
+    "adStatus": "حالة الإعلان",
+    "searchCampaigns": "ابحث عن حملة…",
+    "searchAds": "ابحث عن إعلان…",
+    "noCampaigns": "لا توجد بيانات حملات لهذا النطاق.",
+    "noAds": "لا توجد بيانات إعلانات لهذا النطاق.",
+    "roasOverTime": "عائد إنفاق المشتريات"
   }
 }

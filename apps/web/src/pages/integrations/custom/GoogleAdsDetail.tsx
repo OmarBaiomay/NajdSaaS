@@ -245,11 +245,11 @@ export default function GoogleAdsDetail() {
             dimensionLabel={t("googleAds.campaign")}
             dimensionField={CAMPAIGN_NAME}
             columns={[
-              { id: COST, label: t("googleAds.cost"), render: (v) => currency(v) },
+              { id: COST, label: t("googleAds.cost"), render: (v) => currency(Number(v)) },
               { id: CONVERSIONS, label: t("googleAds.conversions") },
-              { id: COST_PER_CONV, label: t("googleAds.costPerConv"), render: (v) => currency(v) },
-              { id: CONV_VALUE, label: t("googleAds.totalConvValue"), render: (v) => currency(v) },
-              { id: "roas", label: t("googleAds.roas"), render: (v) => plainNumber(v) },
+              { id: COST_PER_CONV, label: t("googleAds.costPerConv"), render: (v) => currency(Number(v)) },
+              { id: CONV_VALUE, label: t("googleAds.totalConvValue"), render: (v) => currency(Number(v)) },
+              { id: "roas", label: t("googleAds.roas"), render: (v) => plainNumber(Number(v)) },
             ]}
             rows={campaignRowsWithRoas}
             loading={campaignLoading}
@@ -262,7 +262,7 @@ export default function GoogleAdsDetail() {
               title={t("googleAds.searchKeywordTable")}
               dimensionLabel={t("googleAds.searchKeyword")}
               dimensionField={KEYWORD_TEXT}
-              columns={[{ id: "roas", label: t("googleAds.roas"), render: (v) => plainNumber(v) }]}
+              columns={[{ id: "roas", label: t("googleAds.roas"), render: (v) => plainNumber(Number(v)) }]}
               rows={keywordRowsWithRoas}
               loading={keywordLoading}
               emptyLabel={t("googleAds.noKeywords")}
@@ -272,7 +272,7 @@ export default function GoogleAdsDetail() {
               title={t("googleAds.searchTermTable")}
               dimensionLabel={t("googleAds.searchTerm")}
               dimensionField={SEARCH_TERM}
-              columns={[{ id: "roas", label: t("googleAds.roas"), render: (v) => plainNumber(v) }]}
+              columns={[{ id: "roas", label: t("googleAds.roas"), render: (v) => plainNumber(Number(v)) }]}
               rows={searchTermRowsWithRoas}
               loading={searchTermLoading}
               emptyLabel={t("googleAds.noSearchTerms")}
