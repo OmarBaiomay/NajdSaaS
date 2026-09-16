@@ -209,5 +209,27 @@
     "byItem": "Revenue by item",
     "byCampaign": "Sessions by session campaign",
     "others": "Others"
+  },
+  "googleAds": {
+    "cost": "Cost",
+    "purchase": "Purchase",
+    "costPerConv": "Cost / conv.",
+    "totalConvValue": "Total conv. value",
+    "roas": "Roas",
+    "campaignTable": "Campaign",
+    "campaign": "Campaign",
+    "conversions": "Conversions",
+    "searchKeywordTable": "Search keyword",
+    "searchKeyword": "Search keyword",
+    "searchTermTable": "Search term",
+    "searchTerm": "Search term",
+    "searchKeywordPlaceholder": "Search keywords…",
+    "searchTermPlaceholder": "Search terms…",
+    "noCampaigns": "No campaign data for this range.",
+    "noKeywords": "No keyword data for this range.",
+    "noSearchTerms": "No search term data for this range.",
+    "costOverTime": "Cost",
+    "conversionsOverTime": "Conversions",
+    "roasOverTime": "ROAS"
   }
 }

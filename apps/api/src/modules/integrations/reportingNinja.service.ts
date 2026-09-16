@@ -1,6 +1,6 @@
 import { prisma } from "../../config/db.js";
 import { encryptSecret, decryptSecret, maskSecret } from "../../utils/crypto.js";
-import { reportingNinjaRequest, ReportingNinjaError } from "./reportingNinja.client.js";
+import { reportingNinjaRequest, reportingNinjaRequestWithMeta, ReportingNinjaError } from "./reportingNinja.client.js";
 import { ApiError } from "../../utils/ApiError.js";
 
 const PROVIDER = "REPORTING_NINJA" as const;
@@ -97,4 +97,21 @@ export async function proxyRequest<T>(
   }
   const apiKey = decryptSecret(credential);
   return reportingNinjaRequest<T>(apiKey, endpoint, body);
+}
+
+/** Same as proxyRequest but also returns Reporting Ninja's response `meta`
+ * — used only for /query, so callers can page past its 1000-row cap via
+ * meta.next_cursor instead of silently truncating a large result set. */
+export async function proxyRequestWithMeta<T>(
+  agencyId: string,
+  tenantId: string,
+  endpoint: "/query",
+  body: Record<string, unknown>
+): Promise<{ data: T; meta: Record<string, unknown> }> {
+  const credential = await getCredentialOrThrow(agencyId, tenantId);
+  if (credential.status === "INVALID") {
+    throw ApiError.badRequest("Reporting Ninja key is invalid — reconnect it in Settings", "NOT_CONNECTED");
+  }
+  const apiKey = decryptSecret(credential);
+  return reportingNinjaRequestWithMeta<T>(apiKey, endpoint, body);
 }

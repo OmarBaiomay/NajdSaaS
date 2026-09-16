@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import GoogleAnalyticsDetail from "./GoogleAnalyticsDetail";
+import GoogleAdsDetail from "./GoogleAdsDetail";
 
 /**
  * Hand-built pages that replace the generic auto-layout for a specific
@@ -12,4 +13,5 @@ import GoogleAnalyticsDetail from "./GoogleAnalyticsDetail";
  */
 export const CUSTOM_INTEGRATION_PAGES: Record<string, ComponentType> = {
   ga4: GoogleAnalyticsDetail,
+  google_ads: GoogleAdsDetail,
 };

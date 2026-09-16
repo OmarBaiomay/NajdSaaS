@@ -72,6 +72,6 @@ export const listFields = asyncHandler(async (req: Request, res: Response) => {
 export const runQuery = asyncHandler(async (req: Request, res: Response) => {
   const tenantId = requireTenantId(req);
   const input = queryProxySchema.parse(req.body);
-  const data = await service.proxyRequest(req.auth!.agencyId, tenantId, "/query", input);
-  res.json({ data });
+  const { data, meta } = await service.proxyRequestWithMeta(req.auth!.agencyId, tenantId, "/query", input);
+  res.json({ data, meta });
 });

@@ -12,6 +12,7 @@ import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
 import { BreakdownTable } from "@/components/integrations/BreakdownTable";
 import { useAccountSelector } from "@/hooks/useAccountSelector";
 import { runQuery } from "@/lib/reportingNinja";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 import { topNWithOthers } from "@/lib/topNWithOthers";
@@ -74,7 +75,7 @@ export default function GoogleAnalyticsDetail() {
   const { data: sourceMediumRows, isFetching: sourceMediumLoading, error: sourceMediumError } = useQuery({
     queryKey: ["ga4-source-medium", connectionKey, accountId, rangeKey],
     queryFn: () =>
-      runQuery<Record<string, string | number>>({
+      fetchAllRows<Record<string, string | number>>({
         integration_id: INTEGRATION_ID,
         connection_key: connectionKey,
         account_id: accountId,
@@ -88,7 +89,7 @@ export default function GoogleAnalyticsDetail() {
   const { data: cityRows, error: cityError } = useQuery({
     queryKey: ["ga4-city", connectionKey, accountId, rangeKey],
     queryFn: () =>
-      runQuery<Record<string, string | number>>({
+      fetchAllRows<Record<string, string | number>>({
         integration_id: INTEGRATION_ID,
         connection_key: connectionKey,
         account_id: accountId,
@@ -102,7 +103,7 @@ export default function GoogleAnalyticsDetail() {
   const { data: itemRows, error: itemError } = useQuery({
     queryKey: ["ga4-item", connectionKey, accountId, rangeKey],
     queryFn: () =>
-      runQuery<Record<string, string | number>>({
+      fetchAllRows<Record<string, string | number>>({
         integration_id: INTEGRATION_ID,
         connection_key: connectionKey,
         account_id: accountId,
@@ -116,7 +117,7 @@ export default function GoogleAnalyticsDetail() {
   const { data: campaignRows, error: campaignError } = useQuery({
     queryKey: ["ga4-campaign", connectionKey, accountId, rangeKey],
     queryFn: () =>
-      runQuery<Record<string, string | number>>({
+      fetchAllRows<Record<string, string | number>>({
         integration_id: INTEGRATION_ID,
         connection_key: connectionKey,
         account_id: accountId,

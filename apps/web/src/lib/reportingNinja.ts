@@ -139,8 +139,28 @@ export interface RunQueryInput {
   filters?: Record<string, unknown>[];
   settings?: Record<string, unknown>;
   limit?: number;
+  cursor?: string;
 }
 export async function runQuery<TRow = Record<string, unknown>>(input: RunQueryInput) {
   const { data } = await api.post<{ data: { rows: TRow[] } }>(`${BASE}/query`, input);
   return data.data.rows;
+}
+
+export interface RnQueryMeta {
+  total_rows?: number;
+  returned_rows?: number;
+  has_more?: boolean;
+  next_cursor?: string;
+}
+
+/** Same as runQuery but also returns Reporting Ninja's pagination meta
+ * (total_rows/has_more/next_cursor) — a single call caps at 1000 rows, so
+ * anything that might legitimately have more (confirmed live: a real
+ * account's search-term report alone had 4,659 rows) needs this to page
+ * through the rest instead of silently truncating. See fetchAllRows. */
+export async function runQueryPage<TRow = Record<string, unknown>>(
+  input: RunQueryInput
+): Promise<{ rows: TRow[]; meta: RnQueryMeta }> {
+  const { data } = await api.post<{ data: { rows: TRow[] }; meta: RnQueryMeta }>(`${BASE}/query`, input);
+  return { rows: data.data.rows, meta: data.meta ?? {} };
 }

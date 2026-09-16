@@ -217,5 +217,27 @@
     "byItem": "الإيرادات حسب المنتج",
     "byCampaign": "الجلسات حسب حملة الجلسة",
     "others": "أخرى"
+  },
+  "googleAds": {
+    "cost": "التكلفة",
+    "purchase": "المشتريات",
+    "costPerConv": "التكلفة / تحويل",
+    "totalConvValue": "إجمالي قيمة التحويلات",
+    "roas": "عائد الإنفاق الإعلاني",
+    "campaignTable": "الحملة",
+    "campaign": "الحملة",
+    "conversions": "التحويلات",
+    "searchKeywordTable": "الكلمة المفتاحية للبحث",
+    "searchKeyword": "الكلمة المفتاحية",
+    "searchTermTable": "مصطلح البحث",
+    "searchTerm": "مصطلح البحث",
+    "searchKeywordPlaceholder": "ابحث عن كلمة مفتاحية…",
+    "searchTermPlaceholder": "ابحث عن مصطلح بحث…",
+    "noCampaigns": "لا توجد بيانات حملات لهذا النطاق.",
+    "noKeywords": "لا توجد بيانات كلمات مفتاحية لهذا النطاق.",
+    "noSearchTerms": "لا توجد بيانات مصطلحات بحث لهذا النطاق.",
+    "costOverTime": "التكلفة",
+    "conversionsOverTime": "التحويلات",
+    "roasOverTime": "عائد الإنفاق الإعلاني"
   }
 }
