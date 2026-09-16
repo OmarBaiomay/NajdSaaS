@@ -624,73 +624,9 @@ export default function IntegrationDetail() {
             </div>
           )}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                {chartMetricField?.field_name ?? effectiveChartMetric} · {dateRangeLabel(dateRange, t)}
-              </h2>
-              <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
-                {(
-                  [
-                    { shape: "area", Icon: AreaChartIcon },
-                    { shape: "bar", Icon: BarChart3 },
-                    { shape: "line", Icon: LineChartIcon },
-                  ] as const
-                ).map(({ shape, Icon }) => (
-                  <button
-                    key={shape}
-                    onClick={() => setChartShape(shape)}
-                    aria-label={t(`integrations.chartShape.${shape}`)}
-                    className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                      chartShape === shape
-                        ? "bg-brand-600 text-white"
-                        : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    }`}
-                  >
-                    <Icon size={14} />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <RevenueChart
-              data={primaryChartData}
-              shape={chartShape}
-              valueFormatter={
-                isCurrencyMetric(chartMetricField?.field_name ?? effectiveChartMetric)
-                  ? (v) => <CurrencyAmount value={v} currencyCode={selectedCurrency} locale={i18n.language} />
-                  : undefined
-              }
-            />
-            <p className="mt-2 text-xs text-slate-400">{t("integrations.dateRangeAppliesToAll")}</p>
-          </div>
-
-          {breakdownCards.length > 0 && (
-            <div className={`grid grid-cols-1 gap-4 ${breakdownCards.length > 1 ? "lg:grid-cols-2" : ""}`}>
-              {breakdownCards.map((card, i) => (
-                <div
-                  key={card.key}
-                  className={`rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 ${
-                    // An odd one out left alone on the last row spans full width
-                    // instead of leaving a dead empty cell beside it.
-                    breakdownCards.length % 2 === 1 && i === breakdownCards.length - 1 ? "lg:col-span-2" : ""
-                  }`}
-                >
-                  <h2 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">{card.title}</h2>
-                  {card.type === "donut" ? (
-                    <>
-                      {card.subtitle && <p className="mb-2 text-xs text-slate-400">{card.subtitle}</p>}
-                      <MetricDonutChart slices={card.slices} centerValue={card.centerValue} centerLabel={card.centerLabel} />
-                    </>
-                  ) : (
-                    <div className="mt-3">
-                      <TopMetricsBarList items={card.items} moreLabel={(count) => t("integrations.moreItems", { count })} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
+          {/* Campaign breakdown sits directly under the hero cards — the same
+              "important" numbers above, just broken out per campaign — before
+              the trend chart and everything else further down the page. */}
           {campaignDimension && (
             <Card className="!p-0 overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4 dark:border-slate-800">
@@ -793,6 +729,73 @@ export default function IntegrationDetail() {
                 </>
               )}
             </Card>
+          )}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                {chartMetricField?.field_name ?? effectiveChartMetric} · {dateRangeLabel(dateRange, t)}
+              </h2>
+              <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-0.5 dark:border-slate-700">
+                {(
+                  [
+                    { shape: "area", Icon: AreaChartIcon },
+                    { shape: "bar", Icon: BarChart3 },
+                    { shape: "line", Icon: LineChartIcon },
+                  ] as const
+                ).map(({ shape, Icon }) => (
+                  <button
+                    key={shape}
+                    onClick={() => setChartShape(shape)}
+                    aria-label={t(`integrations.chartShape.${shape}`)}
+                    className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                      chartShape === shape
+                        ? "bg-brand-600 text-white"
+                        : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <Icon size={14} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <RevenueChart
+              data={primaryChartData}
+              shape={chartShape}
+              valueFormatter={
+                isCurrencyMetric(chartMetricField?.field_name ?? effectiveChartMetric)
+                  ? (v) => <CurrencyAmount value={v} currencyCode={selectedCurrency} locale={i18n.language} />
+                  : undefined
+              }
+            />
+            <p className="mt-2 text-xs text-slate-400">{t("integrations.dateRangeAppliesToAll")}</p>
+          </div>
+
+          {breakdownCards.length > 0 && (
+            <div className={`grid grid-cols-1 gap-4 ${breakdownCards.length > 1 ? "lg:grid-cols-2" : ""}`}>
+              {breakdownCards.map((card, i) => (
+                <div
+                  key={card.key}
+                  className={`rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 ${
+                    // An odd one out left alone on the last row spans full width
+                    // instead of leaving a dead empty cell beside it.
+                    breakdownCards.length % 2 === 1 && i === breakdownCards.length - 1 ? "lg:col-span-2" : ""
+                  }`}
+                >
+                  <h2 className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">{card.title}</h2>
+                  {card.type === "donut" ? (
+                    <>
+                      {card.subtitle && <p className="mb-2 text-xs text-slate-400">{card.subtitle}</p>}
+                      <MetricDonutChart slices={card.slices} centerValue={card.centerValue} centerLabel={card.centerLabel} />
+                    </>
+                  ) : (
+                    <div className="mt-3">
+                      <TopMetricsBarList items={card.items} moreLabel={(count) => t("integrations.moreItems", { count })} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
 
           <div className="flex flex-wrap items-center gap-3">
