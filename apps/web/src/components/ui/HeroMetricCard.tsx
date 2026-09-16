@@ -43,12 +43,17 @@ export function HeroMetricCard({
   if (variant === "solid") {
     return (
       <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 text-white shadow-lg shadow-slate-900/20 dark:from-brand-950 dark:to-slate-900">
-        {menu && <div className="absolute end-3 top-3 text-white/70 [&_svg]:stroke-current">{menu}</div>}
-        <div className="flex items-start justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-white/60">{label}</p>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-            <Icon size={16} />
-          </span>
+        {/* Menu sits next to the metric icon, not on top of it — the two
+            used to occupy the same corner and blend into what looked like a
+            single icon. */}
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-xs font-medium uppercase tracking-wider text-white/60">{label}</p>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {menu && <div className="text-white/70">{menu}</div>}
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+              <Icon size={16} />
+            </span>
+          </div>
         </div>
         {loading ? (
           <>

@@ -93,3 +93,16 @@ export const TONE_HEX: Record<MetricTone, string> = {
 export function isRateMetric(fieldName: string): boolean {
   return /\bctr\b/i.test(fieldName);
 }
+
+/**
+ * True for any metric that's already a ratio/average over its period —
+ * summing it across days (as every plain total correctly is) produces a
+ * meaningless, wildly inflated number. Confirmed live: summing ~30 days of
+ * "Purchase ROAS" (≈6 each day) gave 188 instead of the real ~6. A superset
+ * of isRateMetric — every rate metric belongs here too, but not everything
+ * here is a bounded 0-100 "rate" fit for a donut (ROAS is unbounded, e.g.
+ * 6.21x), so the two stay separate.
+ */
+export function isAveragedMetric(fieldName: string): boolean {
+  return /\bctr\b|\broas\b|\bfrequency\b|\baverage\b|\bavg\b|\bper\b|\brate\b|\bpercentage\b/i.test(fieldName);
+}

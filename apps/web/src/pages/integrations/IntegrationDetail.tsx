@@ -30,7 +30,7 @@ import { getIntegrationDetail, listConnections, listFields, runQuery, type RnFie
 import { getIntegrationVisual } from "@/lib/integrationIcons";
 import { groupMetricsByPercentTier } from "@/lib/metricGrouping";
 import { groupMetricsByNamespace } from "@/lib/metricNamespaceGrouping";
-import { getMetricVisual, isRateMetric, pickSimplestMatch, TONE_HEX, HERO_PRIORITY } from "@/lib/metricVisuals";
+import { getMetricVisual, isRateMetric, isAveragedMetric, pickSimplestMatch, TONE_HEX, HERO_PRIORITY } from "@/lib/metricVisuals";
 import { pickTimeDimension } from "@/lib/timeDimension";
 import { pickCampaignDimension } from "@/lib/campaignDimension";
 import { estimateDateRangeDays } from "@/lib/dateRangeDays";
@@ -324,7 +324,19 @@ export default function IntegrationDetail() {
     [rows, dimensionField]
   );
 
-  const totalFor = (fieldId: string) => sortedRows.reduce((sum, row) => sum + (Number(row[fieldId]) || 0), 0);
+  const fieldNameById = useMemo(() => new Map(metricFields.map((f) => [f.field_id, f.field_name])), [metricFields]);
+
+  // Ratio/average metrics (CTR, ROAS, frequency, "cost per X"…) must be
+  // averaged across the selected range, not summed — summing ~30 days of a
+  // "Purchase ROAS" that's ≈6 each day previously gave 188 instead of the
+  // real ~6 (confirmed live). Every plain total (impressions, spend…) still
+  // sums normally.
+  const totalFor = (fieldId: string) => {
+    const values = sortedRows.map((row) => Number(row[fieldId]) || 0);
+    if (values.length === 0) return 0;
+    const sum = values.reduce((a, b) => a + b, 0);
+    return isAveragedMetric(fieldNameById.get(fieldId) ?? fieldId) ? sum / values.length : sum;
+  };
 
   const availableMetrics = useMemo(
     () => metricFields.filter((f) => !queryResult?.unavailable.includes(f.field_id)),
@@ -513,7 +525,14 @@ export default function IntegrationDetail() {
     : 0;
 
   const chartOptions: SearchableOption[] = availableMetrics.map((f) => ({ value: f.field_id, label: f.field_name }));
-  const effectiveChartMetric = chartMetric || fieldsData?.default_metric || effectiveHeroMetrics[0]?.field_id || "";
+  // Prefer a ROAS-style hero metric as the default trend chart — Reporting
+  // Ninja's own `default_metric` is always "impressions" regardless of what
+  // the hero cards actually headline, which meant the chart never matched
+  // the cards above it. Falls back to the first hero metric, then the API
+  // default, so integrations with no ROAS concept are unaffected.
+  const defaultChartField =
+    effectiveHeroMetrics.find((f) => /\broas\b/i.test(f.field_name)) ?? effectiveHeroMetrics[0];
+  const effectiveChartMetric = chartMetric || defaultChartField?.field_id || fieldsData?.default_metric || "";
   const chartMetricField = availableMetrics.find((f) => f.field_id === effectiveChartMetric);
   const primaryChartData = sortedRows.map((row) => ({
     label: String(row[dimensionField]),
@@ -878,18 +897,18 @@ export default function IntegrationDetail() {
               const rate = isRateMetric(field.field_name);
               const color = TONE_HEX[tone];
 
-              // A rate (CTR and friends) should be averaged across the
-              // period, not summed — and reads better as a progress donut
+              // totalsById already averages ratio/average metrics (CTR,
+              // ROAS, "cost per X"…) instead of summing them — a rate (CTR
+              // and friends) additionally reads better as a progress donut
               // than a trend line. Everything else rotates through
               // line/bar/area so the grid isn't a wall of identical shapes.
-              const average = series.length ? series.reduce((a, b) => a + b, 0) / series.length : 0;
-              const value = rate ? average : totalsById.get(field.field_id) ?? 0;
+              const value = totalsById.get(field.field_id) ?? 0;
 
               let footer;
               if (!hasData) {
                 footer = undefined;
               } else if (rate) {
-                footer = <MiniProgressDonut value={average} color={color} />;
+                footer = <MiniProgressDonut value={value} color={color} />;
               } else if (i % 3 === 0) {
                 footer = <Sparkline data={series} color={color} />;
               } else if (i % 3 === 1) {

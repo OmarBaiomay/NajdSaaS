@@ -46,7 +46,7 @@ export function HeroMetricSwapMenu({
         }}
         aria-label={t("integrations.swapMetric")}
         title={t("integrations.swapMetric")}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-current opacity-60 transition-opacity hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+        className="flex h-6 w-6 items-center justify-center rounded-md text-current opacity-80 transition-opacity hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/15"
       >
         <MoreVertical size={14} />
       </button>
