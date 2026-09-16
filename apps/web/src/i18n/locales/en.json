@@ -87,7 +87,12 @@
     "topBreakdownOf": "{{name}} — top breakdown",
     "moreItems": "+{{count}} more",
     "someMetricsUnavailable": "{{count}} metric was unavailable for this account and is hidden.",
-    "someMetricsUnavailable_other": "{{count}} metrics were unavailable for this account and are hidden."
+    "someMetricsUnavailable_other": "{{count}} metrics were unavailable for this account and are hidden.",
+    "campaigns": "Campaigns",
+    "campaignName": "Campaign",
+    "searchCampaigns": "Search campaigns…",
+    "noCampaigns": "No campaign breakdown available for this integration.",
+    "paginationRange": "{{from}}–{{to}} of {{total}}"
   },
   "settings": {
     "reportingNinjaTitle": "Reporting Ninja",

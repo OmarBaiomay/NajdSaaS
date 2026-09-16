@@ -9,6 +9,8 @@ import {
   BarChart3,
   AreaChart as AreaChartIcon,
   LineChart as LineChartIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -29,6 +31,8 @@ import { groupMetricsByPercentTier } from "@/lib/metricGrouping";
 import { groupMetricsByNamespace } from "@/lib/metricNamespaceGrouping";
 import { getMetricVisual, isRateMetric, pickSimplestMatch, TONE_HEX, HERO_PRIORITY } from "@/lib/metricVisuals";
 import { pickTimeDimension } from "@/lib/timeDimension";
+import { pickCampaignDimension } from "@/lib/campaignDimension";
+import { estimateDateRangeDays } from "@/lib/dateRangeDays";
 import { getDefaultAccount, setDefaultAccount } from "@/lib/defaultAccounts";
 import { isCurrencyMetric } from "@/lib/currency";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
@@ -265,6 +269,12 @@ export default function IntegrationDetail() {
   );
   const metricIds = useMemo(() => metricFields.map((f) => f.field_id), [metricFields]);
 
+  // A flat `limit: 100` used to silently cap this at ~100 rows regardless of
+  // range — a "This year" selection (~365 daily rows) lost every day past
+  // the first 100, understating every total on the page while looking like
+  // the page had just stopped updating. Size the limit to the actual range.
+  const rowLimit = useMemo(() => Math.min(1000, Math.max(100, estimateDateRangeDays(dateRange) + 5)), [dateRange]);
+
   const {
     data: queryResult,
     isFetching: queryLoading,
@@ -289,7 +299,7 @@ export default function IntegrationDetail() {
           ...(defaultSettings ? { settings: defaultSettings } : {}),
           fields: [dimensionField, ...fields],
           date_range: dateRange as unknown as Record<string, unknown>,
-          limit: 100,
+          limit: rowLimit,
         });
 
       const result = await fetchMetricsBisecting(metricIds, runOne, dimensionField, {
@@ -345,6 +355,91 @@ export default function IntegrationDetail() {
 
   const heroMetrics = useMemo(() => pickHeroMetrics(ungrouped, totalsById, HERO_COUNT), [ungrouped, totalsById]);
   const heroIds = useMemo(() => new Set(heroMetrics.map((f) => f.field_id)), [heroMetrics]);
+  const heroMetricIds = useMemo(() => heroMetrics.map((f) => f.field_id), [heroMetrics]);
+
+  // Per-campaign breakdown table — the same "important" metrics shown in the
+  // hero cards above, broken out by campaign instead of summed account-wide,
+  // with search/sort/pagination (matching the campaign table most ad
+  // platforms' own reporting tools show). Not every integration has a
+  // campaign concept, so this quietly disappears when none is found.
+  const campaignDimension = useMemo(() => pickCampaignDimension(fieldsData?.fields ?? []), [fieldsData]);
+
+  const { data: campaignResult, isFetching: campaignLoading } = useQuery({
+    queryKey: [
+      "rn-query-campaigns",
+      integrationId,
+      connectionKey,
+      accountId,
+      dataView,
+      campaignDimension?.field_id,
+      heroMetricIds.join(","),
+      JSON.stringify(dateRange),
+    ],
+    queryFn: async () => {
+      const runOne = (fields: string[]) =>
+        runQuery<Record<string, string | number>>({
+          integration_id: integrationId,
+          connection_key: connectionKey,
+          account_id: accountId,
+          ...(dataView ? { data_view: dataView } : {}),
+          ...(defaultSettings ? { settings: defaultSettings } : {}),
+          fields: [campaignDimension!.field_id, ...fields],
+          date_range: dateRange as unknown as Record<string, unknown>,
+          limit: 1000,
+        });
+      return fetchMetricsBisecting(heroMetricIds, runOne, campaignDimension!.field_id, {
+        remaining: MAX_QUERY_CALLS,
+      });
+    },
+    enabled:
+      dataViewReady &&
+      dateRangeReady &&
+      !!connectionKey &&
+      !!accountId &&
+      !!campaignDimension &&
+      heroMetricIds.length > 0,
+  });
+
+  const [campaignSearch, setCampaignSearch] = useState("");
+  const [campaignSort, setCampaignSort] = useState<{ field: string; dir: "asc" | "desc" } | null>(null);
+  const [campaignPage, setCampaignPage] = useState(0);
+  const CAMPAIGN_PAGE_SIZE = 20;
+
+  const effectiveCampaignSort = campaignSort ?? { field: heroMetricIds[0] ?? "", dir: "desc" as const };
+
+  const filteredCampaignRows = useMemo(() => {
+    if (!campaignDimension) return [];
+    const rows = campaignResult?.rows ?? [];
+    const term = campaignSearch.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter((r) => String(r[campaignDimension.field_id] ?? "").toLowerCase().includes(term));
+  }, [campaignResult, campaignDimension, campaignSearch]);
+
+  const sortedCampaignRows = useMemo(() => {
+    const { field, dir } = effectiveCampaignSort;
+    if (!field) return filteredCampaignRows;
+    const sign = dir === "asc" ? 1 : -1;
+    return filteredCampaignRows.slice().sort((a, b) => {
+      const av = a[field];
+      const bv = b[field];
+      if (typeof av === "number" || typeof bv === "number") {
+        return ((Number(av) || 0) - (Number(bv) || 0)) * sign;
+      }
+      return String(av ?? "").localeCompare(String(bv ?? "")) * sign;
+    });
+  }, [filteredCampaignRows, effectiveCampaignSort]);
+
+  const campaignPageCount = Math.max(1, Math.ceil(sortedCampaignRows.length / CAMPAIGN_PAGE_SIZE));
+  const clampedCampaignPage = Math.min(campaignPage, campaignPageCount - 1);
+  const pagedCampaignRows = sortedCampaignRows.slice(
+    clampedCampaignPage * CAMPAIGN_PAGE_SIZE,
+    (clampedCampaignPage + 1) * CAMPAIGN_PAGE_SIZE
+  );
+
+  const toggleCampaignSort = (field: string) => {
+    setCampaignSort((prev) => (prev?.field === field ? { field, dir: prev.dir === "asc" ? "desc" : "asc" } : { field, dir: "desc" }));
+    setCampaignPage(0);
+  };
 
   // Related metrics namespaced as "<family>:<type>" (e.g. actions:link_click,
   // actions:purchase, actions:lead all under "actions") are far more useful
@@ -594,6 +689,110 @@ export default function IntegrationDetail() {
                 </div>
               ))}
             </div>
+          )}
+
+          {campaignDimension && (
+            <Card className="!p-0 overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4 dark:border-slate-800">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t("integrations.campaigns")}</h2>
+                  {sortedCampaignRows.length > 0 && (
+                    <p className="text-xs text-slate-400">
+                      {t("integrations.paginationRange", {
+                        from: clampedCampaignPage * CAMPAIGN_PAGE_SIZE + 1,
+                        to: Math.min(sortedCampaignRows.length, (clampedCampaignPage + 1) * CAMPAIGN_PAGE_SIZE),
+                        total: sortedCampaignRows.length,
+                      })}
+                    </p>
+                  )}
+                </div>
+                <div className="relative w-full max-w-xs sm:w-64">
+                  <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={campaignSearch}
+                    onChange={(e) => {
+                      setCampaignSearch(e.target.value);
+                      setCampaignPage(0);
+                    }}
+                    placeholder={t("integrations.searchCampaigns")}
+                    className="w-full rounded-lg border border-slate-300 bg-transparent py-1.5 ps-8 pe-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              {campaignLoading && sortedCampaignRows.length === 0 ? (
+                <div className="p-4">
+                  <LoadingBar />
+                </div>
+              ) : sortedCampaignRows.length === 0 ? (
+                <p className="p-6 text-center text-sm text-slate-500">{t("integrations.noCampaigns")}</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400 dark:border-slate-800">
+                          <th className="px-4 py-3 text-start font-medium">
+                            <button
+                              onClick={() => toggleCampaignSort(campaignDimension.field_id)}
+                              className="flex items-center gap-1 hover:text-slate-600 dark:hover:text-slate-300"
+                            >
+                              {t("integrations.campaignName")}
+                              {effectiveCampaignSort.field === campaignDimension.field_id &&
+                                (effectiveCampaignSort.dir === "asc" ? "▲" : "▼")}
+                            </button>
+                          </th>
+                          {heroMetrics.map((field) => (
+                            <th key={field.field_id} className="px-4 py-3 text-start font-medium">
+                              <button
+                                onClick={() => toggleCampaignSort(field.field_id)}
+                                className="flex items-center gap-1 hover:text-slate-600 dark:hover:text-slate-300"
+                              >
+                                {field.field_name}
+                                {effectiveCampaignSort.field === field.field_id &&
+                                  (effectiveCampaignSort.dir === "asc" ? "▲" : "▼")}
+                              </button>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {pagedCampaignRows.map((row, i) => (
+                          <tr key={`${row[campaignDimension.field_id]}-${i}`}>
+                            <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                              {String(row[campaignDimension.field_id] ?? "—")}
+                            </td>
+                            {heroMetrics.map((field) => (
+                              <td key={field.field_id} className="px-4 py-3">
+                                {formatMetricValue(field.field_name, Number(row[field.field_id]) || 0)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {campaignPageCount > 1 && (
+                    <div className="flex items-center justify-end gap-2 border-t border-slate-100 p-3 dark:border-slate-800">
+                      <button
+                        onClick={() => setCampaignPage((p) => Math.max(0, p - 1))}
+                        disabled={clampedCampaignPage === 0}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button
+                        onClick={() => setCampaignPage((p) => Math.min(campaignPageCount - 1, p + 1))}
+                        disabled={clampedCampaignPage >= campaignPageCount - 1}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
           )}
 
           <div className="flex flex-wrap items-center gap-3">

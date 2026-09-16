@@ -95,7 +95,12 @@
     "someMetricsUnavailable_two": "مقياسان غير متاحين لهذا الحساب وتم إخفاؤهما.",
     "someMetricsUnavailable_few": "{{count}} مقاييس غير متاحة لهذا الحساب وتم إخفاؤها.",
     "someMetricsUnavailable_many": "{{count}} مقياسًا غير متاح لهذا الحساب وتم إخفاؤها.",
-    "someMetricsUnavailable_other": "{{count}} مقياس غير متاح لهذا الحساب وتم إخفاؤها."
+    "someMetricsUnavailable_other": "{{count}} مقياس غير متاح لهذا الحساب وتم إخفاؤها.",
+    "campaigns": "الحملات",
+    "campaignName": "الحملة",
+    "searchCampaigns": "ابحث عن حملة…",
+    "noCampaigns": "لا يتوفر تفصيل حسب الحملة لهذا التكامل.",
+    "paginationRange": "{{from}}–{{to}} من {{total}}"
   },
   "settings": {
     "reportingNinjaTitle": "Reporting Ninja",
