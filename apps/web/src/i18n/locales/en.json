@@ -267,5 +267,19 @@
     "campaign": "Campaign Name",
     "noCampaigns": "No campaign data for this range.",
     "roasOverTime": "Purchase ROAS"
+  },
+  "tiktokAds": {
+    "impressions": "Impressions",
+    "spend": "Amount Spent",
+    "cost": "Cost",
+    "purchases": "Purchases",
+    "conversions": "Conversions",
+    "roas": "ROAS",
+    "clicks": "Clicks",
+    "ctr": "CTR",
+    "reach": "Reach",
+    "campaignTable": "Campaigns",
+    "campaign": "Campaign Name",
+    "noCampaigns": "No campaign data for this range."
   }
 }
