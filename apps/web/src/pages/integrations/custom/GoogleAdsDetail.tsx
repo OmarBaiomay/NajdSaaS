@@ -2,18 +2,20 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Wallet, ShoppingBag, TrendingUp, Target, Percent } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { GlowCard } from "@/components/ui/GlowCard";
+import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { RevenueChart } from "@/components/charts/RevenueChart";
+import { Sparkline } from "@/components/charts/Sparkline";
 import { BreakdownTable } from "@/components/integrations/BreakdownTable";
 import { useAccountSelector } from "@/hooks/useAccountSelector";
 import { runQuery } from "@/lib/reportingNinja";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
+import { getMetricVisual } from "@/lib/metricVisuals";
 import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 
 const INTEGRATION_ID = "google_ads";
@@ -161,6 +163,17 @@ export default function GoogleAdsDetail() {
   const conversionsTrend = sortedTrendRows.map((r) => ({ label: String(r[DAY]), value: Number(r[CONVERSIONS]) || 0 }));
   const roasTrend = sortedTrendRows.map((r) => ({ label: String(r[DAY]), value: roasOf(r) }));
 
+  // Sparkline series for the hero cards — same source as the trend charts
+  // below, just the bare numbers.
+  const costSeries = sortedTrendRows.map((r) => Number(r[COST]) || 0);
+  const conversionsSeries = sortedTrendRows.map((r) => Number(r[CONVERSIONS]) || 0);
+  const convValueSeries = sortedTrendRows.map((r) => Number(r[CONV_VALUE]) || 0);
+  const costPerConvSeries = sortedTrendRows.map((r) => {
+    const conv = Number(r[CONVERSIONS]) || 0;
+    return conv > 0 ? (Number(r[COST]) || 0) / conv : 0;
+  });
+  const roasSeries = roasTrend.map((p) => p.value);
+
   const anyError = heroError ?? campaignError ?? keywordError ?? searchTermError ?? trendError;
   const errorMessage = anyError ? extractApiErrorMessage(anyError) ?? t("integrations.loadError") : undefined;
 
@@ -203,39 +216,45 @@ export default function GoogleAdsDetail() {
       {accountId && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <GlowCard
+            <HeroMetricCard
               label={t("googleAds.cost")}
               value={currency(heroRow?.[COST] ?? 0)}
-              icon={<Wallet size={16} />}
-              accent="emerald"
+              icon={getMetricVisual("spend").icon}
+              tone={getMetricVisual("spend").tone}
+              variant="solid"
+              footer={costSeries.some((v) => v !== 0) ? <Sparkline data={costSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("googleAds.purchase")}
               value={plainNumber(heroRow?.[CONVERSIONS] ?? 0)}
-              icon={<ShoppingBag size={16} />}
-              accent="orange"
+              icon={getMetricVisual("purchase").icon}
+              tone={getMetricVisual("purchase").tone}
+              footer={conversionsSeries.some((v) => v !== 0) ? <Sparkline data={conversionsSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("googleAds.costPerConv")}
               value={currency(heroRow?.[COST_PER_CONV] ?? 0)}
-              icon={<Target size={16} />}
-              accent="sky"
+              icon={getMetricVisual("cost per").icon}
+              tone={getMetricVisual("cost per").tone}
+              footer={costPerConvSeries.some((v) => v !== 0) ? <Sparkline data={costPerConvSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("googleAds.totalConvValue")}
               value={currency(heroRow?.[CONV_VALUE] ?? 0)}
-              icon={<TrendingUp size={16} />}
-              accent="violet"
+              icon={getMetricVisual("value").icon}
+              tone={getMetricVisual("value").tone}
+              footer={convValueSeries.some((v) => v !== 0) ? <Sparkline data={convValueSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("googleAds.roas")}
               value={plainNumber(heroRoas)}
-              icon={<Percent size={16} />}
-              accent="amber"
+              icon={getMetricVisual("roas").icon}
+              tone={getMetricVisual("roas").tone}
+              footer={roasSeries.some((v) => v !== 0) ? <Sparkline data={roasSeries} /> : undefined}
               loading={heroLoading}
             />
           </div>

@@ -2,18 +2,20 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Users2, MousePointerClick, ShoppingBag, Wallet } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { GlowCard } from "@/components/ui/GlowCard";
+import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
+import { Sparkline } from "@/components/charts/Sparkline";
 import { BreakdownTable } from "@/components/integrations/BreakdownTable";
 import { useAccountSelector } from "@/hooks/useAccountSelector";
 import { runQuery } from "@/lib/reportingNinja";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
+import { getMetricVisual } from "@/lib/metricVisuals";
 import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 import { topNWithOthers } from "@/lib/topNWithOthers";
 
@@ -72,6 +74,31 @@ export default function GoogleAnalyticsDetail() {
     enabled: queryEnabled,
   });
 
+  // Day-level series purely for the hero cards' sparklines — the aggregate
+  // query above is what drives the actual card values (see the comment on
+  // it for why totalUsers in particular can't just be summed from this).
+  const { data: dailyRows, error: dailyError } = useQuery({
+    queryKey: ["ga4-daily", connectionKey, accountId, rangeKey],
+    queryFn: () =>
+      runQuery<Record<string, string | number>>({
+        integration_id: INTEGRATION_ID,
+        connection_key: connectionKey,
+        account_id: accountId,
+        fields: ["date", "totalUsers", "sessions", "totalRevenue", "totalPurchasers"],
+        date_range: dateRange as unknown as Record<string, unknown>,
+        limit: 1000,
+      }),
+    enabled: queryEnabled,
+  });
+  const sortedDailyRows = useMemo(
+    () => (dailyRows ?? []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date))),
+    [dailyRows]
+  );
+  const purchasersSeries = sortedDailyRows.map((r) => Number(r.totalPurchasers) || 0);
+  const revenueSeries = sortedDailyRows.map((r) => Number(r.totalRevenue) || 0);
+  const usersSeries = sortedDailyRows.map((r) => Number(r.totalUsers) || 0);
+  const sessionsSeries = sortedDailyRows.map((r) => Number(r.sessions) || 0);
+
   const { data: sourceMediumRows, isFetching: sourceMediumLoading, error: sourceMediumError } = useQuery({
     queryKey: ["ga4-source-medium", connectionKey, accountId, rangeKey],
     queryFn: () =>
@@ -128,7 +155,7 @@ export default function GoogleAnalyticsDetail() {
     enabled: queryEnabled,
   });
 
-  const anyError = heroError ?? sourceMediumError ?? cityError ?? itemError ?? campaignError;
+  const anyError = heroError ?? dailyError ?? sourceMediumError ?? cityError ?? itemError ?? campaignError;
   const errorMessage = anyError ? extractApiErrorMessage(anyError) ?? t("integrations.loadError") : undefined;
 
   const citySlices = useMemo(
@@ -183,32 +210,37 @@ export default function GoogleAnalyticsDetail() {
       {accountId && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <GlowCard
+            <HeroMetricCard
               label={t("ga4.purchases")}
               value={(heroRow?.totalPurchasers ?? 0).toLocaleString(i18n.language)}
-              icon={<ShoppingBag size={16} />}
-              accent="orange"
+              icon={getMetricVisual("purchase").icon}
+              tone={getMetricVisual("purchase").tone}
+              variant="solid"
+              footer={purchasersSeries.some((v) => v !== 0) ? <Sparkline data={purchasersSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("ga4.totalRevenue")}
               value={<CurrencyAmount value={heroRow?.totalRevenue ?? 0} currencyCode={selectedCurrency} locale={i18n.language} />}
-              icon={<Wallet size={16} />}
-              accent="emerald"
+              icon={getMetricVisual("revenue").icon}
+              tone={getMetricVisual("revenue").tone}
+              footer={revenueSeries.some((v) => v !== 0) ? <Sparkline data={revenueSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("ga4.totalUsers")}
               value={(heroRow?.totalUsers ?? 0).toLocaleString(i18n.language)}
-              icon={<Users2 size={16} />}
-              accent="violet"
+              icon={getMetricVisual("audience").icon}
+              tone={getMetricVisual("audience").tone}
+              footer={usersSeries.some((v) => v !== 0) ? <Sparkline data={usersSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("ga4.sessions")}
               value={(heroRow?.sessions ?? 0).toLocaleString(i18n.language)}
-              icon={<MousePointerClick size={16} />}
-              accent="sky"
+              icon={getMetricVisual("session").icon}
+              tone={getMetricVisual("session").tone}
+              footer={sessionsSeries.some((v) => v !== 0) ? <Sparkline data={sessionsSeries} /> : undefined}
               loading={heroLoading}
             />
           </div>

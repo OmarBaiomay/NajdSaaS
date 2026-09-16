@@ -2,19 +2,21 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Eye, Wallet, ShoppingBag, Percent } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { GlowCard } from "@/components/ui/GlowCard";
+import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { RevenueChart } from "@/components/charts/RevenueChart";
+import { Sparkline } from "@/components/charts/Sparkline";
 import { BreakdownTable } from "@/components/integrations/BreakdownTable";
 import { clsx } from "@/lib/clsx";
 import { useAccountSelector } from "@/hooks/useAccountSelector";
 import { runQuery } from "@/lib/reportingNinja";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
+import { getMetricVisual } from "@/lib/metricVisuals";
 import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 
 const INTEGRATION_ID = "snapchat_ads";
@@ -80,7 +82,7 @@ export default function SnapchatAdsDetail() {
         account_id: accountId,
         data_view: "account",
         settings: SETTINGS,
-        fields: [DAY, IMPRESSIONS, SPEND, PURCHASES, PURCHASE_VALUE],
+        fields: [DAY, IMPRESSIONS, SPEND, PURCHASES, PURCHASE_VALUE, ROAS],
         date_range: dateRange as unknown as Record<string, unknown>,
         limit: 1000,
       }),
@@ -95,14 +97,17 @@ export default function SnapchatAdsDetail() {
     return { impressions, spend, purchases, roas: spend > 0 ? value / spend : 0 };
   }, [dailyRows]);
 
-  const roasTrend = useMemo(
-    () =>
-      (dailyRows ?? [])
-        .slice()
-        .sort((a, b) => String(a[DAY]).localeCompare(String(b[DAY])))
-        .map((r) => ({ label: String(r[DAY]), value: Number(r[ROAS]) || 0 })),
+  const sortedDailyRows = useMemo(
+    () => (dailyRows ?? []).slice().sort((a, b) => String(a[DAY]).localeCompare(String(b[DAY]))),
     [dailyRows]
   );
+  const roasTrend = sortedDailyRows.map((r) => ({ label: String(r[DAY]), value: Number(r[ROAS]) || 0 }));
+
+  // Sparkline series for the hero cards.
+  const impressionsSeries = sortedDailyRows.map((r) => Number(r[IMPRESSIONS]) || 0);
+  const spendSeries = sortedDailyRows.map((r) => Number(r[SPEND]) || 0);
+  const purchasesSeries = sortedDailyRows.map((r) => Number(r[PURCHASES]) || 0);
+  const roasSeries = roasTrend.map((p) => p.value);
 
   const { data: campaignRows, isFetching: campaignLoading, error: campaignError } = useQuery({
     queryKey: ["snap-campaigns", connectionKey, accountId, rangeKey],
@@ -178,32 +183,37 @@ export default function SnapchatAdsDetail() {
       {accountId && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <GlowCard
+            <HeroMetricCard
               label={t("snapchatAds.paidImpressions")}
               value={plainNumber(heroTotals.impressions)}
-              icon={<Eye size={16} />}
-              accent="sky"
+              icon={getMetricVisual("impression").icon}
+              tone={getMetricVisual("impression").tone}
+              variant="solid"
+              footer={impressionsSeries.some((v) => v !== 0) ? <Sparkline data={impressionsSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("snapchatAds.spend")}
               value={currency(heroTotals.spend)}
-              icon={<Wallet size={16} />}
-              accent="emerald"
+              icon={getMetricVisual("spend").icon}
+              tone={getMetricVisual("spend").tone}
+              footer={spendSeries.some((v) => v !== 0) ? <Sparkline data={spendSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("snapchatAds.purchases")}
               value={plainNumber(heroTotals.purchases)}
-              icon={<ShoppingBag size={16} />}
-              accent="orange"
+              icon={getMetricVisual("purchase").icon}
+              tone={getMetricVisual("purchase").tone}
+              footer={purchasesSeries.some((v) => v !== 0) ? <Sparkline data={purchasesSeries} /> : undefined}
               loading={heroLoading}
             />
-            <GlowCard
+            <HeroMetricCard
               label={t("snapchatAds.purchaseRoas")}
               value={plainNumber(heroTotals.roas)}
-              icon={<Percent size={16} />}
-              accent="amber"
+              icon={getMetricVisual("roas").icon}
+              tone={getMetricVisual("roas").tone}
+              footer={roasSeries.some((v) => v !== 0) ? <Sparkline data={roasSeries} /> : undefined}
               loading={heroLoading}
             />
           </div>
