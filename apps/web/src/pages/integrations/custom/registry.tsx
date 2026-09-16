@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import GoogleAnalyticsDetail from "./GoogleAnalyticsDetail";
 import GoogleAdsDetail from "./GoogleAdsDetail";
 import SnapchatAdsDetail from "./SnapchatAdsDetail";
+import MetaAdsDetail from "./MetaAdsDetail";
 
 /**
  * Hand-built pages that replace the generic auto-layout for a specific
@@ -16,4 +17,5 @@ export const CUSTOM_INTEGRATION_PAGES: Record<string, ComponentType> = {
   ga4: GoogleAnalyticsDetail,
   google_ads: GoogleAdsDetail,
   snapchat_ads: SnapchatAdsDetail,
+  facebook_ads: MetaAdsDetail,
 };

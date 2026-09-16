@@ -4,22 +4,37 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { MetricDonutChart } from "@/components/charts/MetricDonutChart";
-import { Sparkline } from "@/components/charts/Sparkline";
 import { BreakdownTable } from "@/components/integrations/BreakdownTable";
+import { SwappableHeroRow, type HeroCandidate } from "@/components/integrations/SwappableHeroRow";
 import { useAccountSelector } from "@/hooks/useAccountSelector";
 import { runQuery } from "@/lib/reportingNinja";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
-import { getMetricVisual } from "@/lib/metricVisuals";
 import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 import { topNWithOthers } from "@/lib/topNWithOthers";
 
 const INTEGRATION_ID = "ga4";
+
+// The 4 defaults (matching the reference report) plus a handful of
+// well-known alternates for the ⋮ swap menu — all fetched together in the
+// same no-dimension aggregate query, so every candidate's value comes from
+// the same true period total (not summed daily rows — see the comment on
+// the hero query for why that matters for a distinct-user count).
+const HERO_FIELDS = [
+  "totalUsers",
+  "sessions",
+  "totalRevenue",
+  "totalPurchasers",
+  "newUsers",
+  "engagedSessions",
+  "screenPageViews",
+  "averageSessionDuration",
+];
+const DEFAULT_HERO_KEYS = ["purchasers", "revenue", "users", "sessions"];
 
 /**
  * Hand-built Google Analytics 4 page, mirroring the tenant's existing
@@ -65,7 +80,7 @@ export default function GoogleAnalyticsDetail() {
         integration_id: INTEGRATION_ID,
         connection_key: connectionKey,
         account_id: accountId,
-        fields: ["totalUsers", "sessions", "totalRevenue", "totalPurchasers"],
+        fields: HERO_FIELDS,
         date_range: dateRange as unknown as Record<string, unknown>,
         limit: 1,
       });
@@ -84,7 +99,7 @@ export default function GoogleAnalyticsDetail() {
         integration_id: INTEGRATION_ID,
         connection_key: connectionKey,
         account_id: accountId,
-        fields: ["date", "totalUsers", "sessions", "totalRevenue", "totalPurchasers"],
+        fields: ["date", ...HERO_FIELDS],
         date_range: dateRange as unknown as Record<string, unknown>,
         limit: 1000,
       }),
@@ -94,10 +109,75 @@ export default function GoogleAnalyticsDetail() {
     () => (dailyRows ?? []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date))),
     [dailyRows]
   );
-  const purchasersSeries = sortedDailyRows.map((r) => Number(r.totalPurchasers) || 0);
-  const revenueSeries = sortedDailyRows.map((r) => Number(r.totalRevenue) || 0);
-  const usersSeries = sortedDailyRows.map((r) => Number(r.totalUsers) || 0);
-  const sessionsSeries = sortedDailyRows.map((r) => Number(r.sessions) || 0);
+  const seriesFor = (fieldId: string) => sortedDailyRows.map((r) => Number(r[fieldId]) || 0);
+  const plainNumber = (v: number) => v.toLocaleString(i18n.language, { maximumFractionDigits: 2 });
+
+  const heroCandidates: HeroCandidate[] = [
+    {
+      key: "purchasers",
+      label: t("ga4.purchases"),
+      visualKeyword: "purchase",
+      format: plainNumber,
+      value: heroRow?.totalPurchasers ?? 0,
+      series: seriesFor("totalPurchasers"),
+    },
+    {
+      key: "revenue",
+      label: t("ga4.totalRevenue"),
+      visualKeyword: "revenue",
+      format: (v) => <CurrencyAmount value={v} currencyCode={selectedCurrency} locale={i18n.language} />,
+      value: heroRow?.totalRevenue ?? 0,
+      series: seriesFor("totalRevenue"),
+    },
+    {
+      key: "users",
+      label: t("ga4.totalUsers"),
+      visualKeyword: "audience",
+      format: plainNumber,
+      value: heroRow?.totalUsers ?? 0,
+      series: seriesFor("totalUsers"),
+    },
+    {
+      key: "sessions",
+      label: t("ga4.sessions"),
+      visualKeyword: "session",
+      format: plainNumber,
+      value: heroRow?.sessions ?? 0,
+      series: seriesFor("sessions"),
+    },
+    {
+      key: "newUsers",
+      label: t("ga4.newUsers"),
+      visualKeyword: "audience",
+      format: plainNumber,
+      value: heroRow?.newUsers ?? 0,
+      series: seriesFor("newUsers"),
+    },
+    {
+      key: "engagedSessions",
+      label: t("ga4.engagedSessions"),
+      visualKeyword: "session",
+      format: plainNumber,
+      value: heroRow?.engagedSessions ?? 0,
+      series: seriesFor("engagedSessions"),
+    },
+    {
+      key: "pageViews",
+      label: t("ga4.pageViews"),
+      visualKeyword: "view",
+      format: plainNumber,
+      value: heroRow?.screenPageViews ?? 0,
+      series: seriesFor("screenPageViews"),
+    },
+    {
+      key: "avgSessionDuration",
+      label: t("ga4.avgSessionDuration"),
+      visualKeyword: "average",
+      format: plainNumber,
+      value: heroRow?.averageSessionDuration ?? 0,
+      series: seriesFor("averageSessionDuration"),
+    },
+  ];
 
   const { data: sourceMediumRows, isFetching: sourceMediumLoading, error: sourceMediumError } = useQuery({
     queryKey: ["ga4-source-medium", connectionKey, accountId, rangeKey],
@@ -209,41 +289,12 @@ export default function GoogleAnalyticsDetail() {
 
       {accountId && (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <HeroMetricCard
-              label={t("ga4.purchases")}
-              value={(heroRow?.totalPurchasers ?? 0).toLocaleString(i18n.language)}
-              icon={getMetricVisual("purchase").icon}
-              tone={getMetricVisual("purchase").tone}
-              variant="solid"
-              footer={purchasersSeries.some((v) => v !== 0) ? <Sparkline data={purchasersSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("ga4.totalRevenue")}
-              value={<CurrencyAmount value={heroRow?.totalRevenue ?? 0} currencyCode={selectedCurrency} locale={i18n.language} />}
-              icon={getMetricVisual("revenue").icon}
-              tone={getMetricVisual("revenue").tone}
-              footer={revenueSeries.some((v) => v !== 0) ? <Sparkline data={revenueSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("ga4.totalUsers")}
-              value={(heroRow?.totalUsers ?? 0).toLocaleString(i18n.language)}
-              icon={getMetricVisual("audience").icon}
-              tone={getMetricVisual("audience").tone}
-              footer={usersSeries.some((v) => v !== 0) ? <Sparkline data={usersSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("ga4.sessions")}
-              value={(heroRow?.sessions ?? 0).toLocaleString(i18n.language)}
-              icon={getMetricVisual("session").icon}
-              tone={getMetricVisual("session").tone}
-              footer={sessionsSeries.some((v) => v !== 0) ? <Sparkline data={sessionsSeries} /> : undefined}
-              loading={heroLoading}
-            />
-          </div>
+          <SwappableHeroRow
+            defaultKeys={DEFAULT_HERO_KEYS}
+            candidates={heroCandidates}
+            loading={heroLoading}
+            resetKey={accountId}
+          />
 
           <BreakdownTable
             title={t("ga4.sourceMediumTable")}

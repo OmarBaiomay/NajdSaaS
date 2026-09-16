@@ -4,19 +4,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { RevenueChart } from "@/components/charts/RevenueChart";
-import { Sparkline } from "@/components/charts/Sparkline";
 import { BreakdownTable } from "@/components/integrations/BreakdownTable";
+import { SwappableHeroRow, type HeroCandidate } from "@/components/integrations/SwappableHeroRow";
 import { clsx } from "@/lib/clsx";
 import { useAccountSelector } from "@/hooks/useAccountSelector";
 import { runQuery } from "@/lib/reportingNinja";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
-import { getMetricVisual } from "@/lib/metricVisuals";
 import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 
 const INTEGRATION_ID = "snapchat_ads";
@@ -33,9 +31,17 @@ const SPEND = "spend";
 const PURCHASES = "conversion_purchases";
 const PURCHASE_VALUE = "conversion_purchases_value";
 const ROAS = "purchase_roas";
+const TOTAL_IMPRESSIONS = "total_impressions";
+const SWIPE_UPS = "conversion_purchases_swipe_up";
 const CAMPAIGN_NAME = "campaign_name";
 const AD_NAME = "ad_name";
 const AD_STATUS = "ad_status";
+
+// The 4 defaults (matching the reference report) plus a couple of
+// well-known alternates for the ⋮ swap menu, all fetched in the same
+// day-level query as the defaults.
+const HERO_FIELDS = [IMPRESSIONS, SPEND, PURCHASES, PURCHASE_VALUE, ROAS, TOTAL_IMPRESSIONS, SWIPE_UPS];
+const DEFAULT_HERO_KEYS = ["impressions", "spend", "purchases", "roas"];
 
 const STATUS_STYLES: Record<string, string> = {
   Active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
@@ -82,7 +88,7 @@ export default function SnapchatAdsDetail() {
         account_id: accountId,
         data_view: "account",
         settings: SETTINGS,
-        fields: [DAY, IMPRESSIONS, SPEND, PURCHASES, PURCHASE_VALUE, ROAS],
+        fields: [DAY, ...HERO_FIELDS],
         date_range: dateRange as unknown as Record<string, unknown>,
         limit: 1000,
       }),
@@ -108,6 +114,59 @@ export default function SnapchatAdsDetail() {
   const spendSeries = sortedDailyRows.map((r) => Number(r[SPEND]) || 0);
   const purchasesSeries = sortedDailyRows.map((r) => Number(r[PURCHASES]) || 0);
   const roasSeries = roasTrend.map((p) => p.value);
+  const totalImpressionsSeries = sortedDailyRows.map((r) => Number(r[TOTAL_IMPRESSIONS]) || 0);
+  const swipeUpsSeries = sortedDailyRows.map((r) => Number(r[SWIPE_UPS]) || 0);
+
+  const heroCandidates: HeroCandidate[] = [
+    {
+      key: "impressions",
+      label: t("snapchatAds.paidImpressions"),
+      visualKeyword: "impression",
+      format: plainNumber,
+      value: heroTotals.impressions,
+      series: impressionsSeries,
+    },
+    {
+      key: "spend",
+      label: t("snapchatAds.spend"),
+      visualKeyword: "spend",
+      format: currency,
+      value: heroTotals.spend,
+      series: spendSeries,
+    },
+    {
+      key: "purchases",
+      label: t("snapchatAds.purchases"),
+      visualKeyword: "purchase",
+      format: plainNumber,
+      value: heroTotals.purchases,
+      series: purchasesSeries,
+    },
+    {
+      key: "roas",
+      label: t("snapchatAds.purchaseRoas"),
+      visualKeyword: "roas",
+      format: plainNumber,
+      value: heroTotals.roas,
+      series: roasSeries,
+    },
+    {
+      key: "totalImpressions",
+      label: t("snapchatAds.totalImpressions"),
+      visualKeyword: "impression",
+      format: plainNumber,
+      value: sortedDailyRows.reduce((s, r) => s + (Number(r[TOTAL_IMPRESSIONS]) || 0), 0),
+      series: totalImpressionsSeries,
+    },
+    {
+      key: "swipeUps",
+      label: t("snapchatAds.swipeUps"),
+      visualKeyword: "click",
+      format: plainNumber,
+      value: sortedDailyRows.reduce((s, r) => s + (Number(r[SWIPE_UPS]) || 0), 0),
+      series: swipeUpsSeries,
+    },
+  ];
 
   const { data: campaignRows, isFetching: campaignLoading, error: campaignError } = useQuery({
     queryKey: ["snap-campaigns", connectionKey, accountId, rangeKey],
@@ -182,41 +241,12 @@ export default function SnapchatAdsDetail() {
 
       {accountId && (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <HeroMetricCard
-              label={t("snapchatAds.paidImpressions")}
-              value={plainNumber(heroTotals.impressions)}
-              icon={getMetricVisual("impression").icon}
-              tone={getMetricVisual("impression").tone}
-              variant="solid"
-              footer={impressionsSeries.some((v) => v !== 0) ? <Sparkline data={impressionsSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("snapchatAds.spend")}
-              value={currency(heroTotals.spend)}
-              icon={getMetricVisual("spend").icon}
-              tone={getMetricVisual("spend").tone}
-              footer={spendSeries.some((v) => v !== 0) ? <Sparkline data={spendSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("snapchatAds.purchases")}
-              value={plainNumber(heroTotals.purchases)}
-              icon={getMetricVisual("purchase").icon}
-              tone={getMetricVisual("purchase").tone}
-              footer={purchasesSeries.some((v) => v !== 0) ? <Sparkline data={purchasesSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("snapchatAds.purchaseRoas")}
-              value={plainNumber(heroTotals.roas)}
-              icon={getMetricVisual("roas").icon}
-              tone={getMetricVisual("roas").tone}
-              footer={roasSeries.some((v) => v !== 0) ? <Sparkline data={roasSeries} /> : undefined}
-              loading={heroLoading}
-            />
-          </div>
+          <SwappableHeroRow
+            defaultKeys={DEFAULT_HERO_KEYS}
+            candidates={heroCandidates}
+            loading={heroLoading}
+            resetKey={accountId}
+          />
 
           <BreakdownTable
             title={t("snapchatAds.campaignTable")}

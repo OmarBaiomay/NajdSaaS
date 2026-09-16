@@ -208,7 +208,11 @@
     "byCity": "Sessions by city",
     "byItem": "Revenue by item",
     "byCampaign": "Sessions by session campaign",
-    "others": "Others"
+    "others": "Others",
+    "newUsers": "New Users",
+    "engagedSessions": "Engaged Sessions",
+    "pageViews": "Page Views",
+    "avgSessionDuration": "Avg. Session Duration"
   },
   "googleAds": {
     "cost": "Cost",
@@ -246,6 +250,22 @@
     "searchAds": "Search ads…",
     "noCampaigns": "No campaign data for this range.",
     "noAds": "No ad data for this range.",
+    "roasOverTime": "Purchase ROAS",
+    "totalImpressions": "Total Impressions",
+    "swipeUps": "Swipe Ups"
+  },
+  "metaAds": {
+    "impressions": "Impressions",
+    "spend": "Amount Spent",
+    "purchases": "Purchases",
+    "purchaseRoas": "Purchase ROAS",
+    "linkClicks": "Link Clicks",
+    "reach": "Reach",
+    "ctr": "CTR",
+    "clicks": "Clicks",
+    "campaignTable": "Campaigns",
+    "campaign": "Campaign Name",
+    "noCampaigns": "No campaign data for this range.",
     "roasOverTime": "Purchase ROAS"
   }
 }

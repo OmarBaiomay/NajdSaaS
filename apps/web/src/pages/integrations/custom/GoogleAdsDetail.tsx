@@ -4,18 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
 import { CurrencyAmount } from "@/components/ui/SarSymbol";
 import { RevenueChart } from "@/components/charts/RevenueChart";
-import { Sparkline } from "@/components/charts/Sparkline";
 import { BreakdownTable } from "@/components/integrations/BreakdownTable";
+import { SwappableHeroRow, type HeroCandidate } from "@/components/integrations/SwappableHeroRow";
 import { useAccountSelector } from "@/hooks/useAccountSelector";
 import { runQuery } from "@/lib/reportingNinja";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { getIntegrationVisual } from "@/lib/integrationIcons";
-import { getMetricVisual } from "@/lib/metricVisuals";
 import { extractApiErrorMessage } from "@/lib/reportingNinjaErrors";
 
 const INTEGRATION_ID = "google_ads";
@@ -30,10 +28,19 @@ const COST = "metrics.cost_micros";
 const CONVERSIONS = "metrics.conversions";
 const COST_PER_CONV = "metrics.cost_per_conversion";
 const CONV_VALUE = "metrics.conversions_value";
+const IMPRESSIONS = "metrics.impressions";
+const CLICKS = "metrics.clicks";
+const CTR = "metrics.ctr";
 const DAY = "segments.date";
 const CAMPAIGN_NAME = "campaign.name";
 const KEYWORD_TEXT = "ad_group_criterion.keyword.text";
 const SEARCH_TERM = "search_term_view.search_term";
+
+// The 4 defaults (matching the reference report) plus a few well-known
+// alternates for the ⋮ swap menu, all fetched in the same "customer"
+// no-dimension aggregate query as the defaults.
+const HERO_FIELDS = [COST, CONVERSIONS, COST_PER_CONV, CONV_VALUE, IMPRESSIONS, CLICKS, CTR];
+const DEFAULT_HERO_KEYS = ["cost", "purchase", "costPerConv", "convValue", "roas"];
 
 /** Google Ads doesn't expose ROAS as its own field — the reference report's
  * "4.61" is Total conv. value ÷ Cost (verified: 141642.20 / 30822.95 =
@@ -77,7 +84,7 @@ export default function GoogleAdsDetail() {
         connection_key: connectionKey,
         account_id: accountId,
         data_view: "customer",
-        fields: [COST, CONVERSIONS, COST_PER_CONV, CONV_VALUE],
+        fields: HERO_FIELDS,
         date_range: dateRange as unknown as Record<string, unknown>,
         limit: 1,
       });
@@ -149,7 +156,7 @@ export default function GoogleAdsDetail() {
         connection_key: connectionKey,
         account_id: accountId,
         data_view: "customer",
-        fields: [DAY, COST, CONVERSIONS, CONV_VALUE],
+        fields: [DAY, ...HERO_FIELDS],
         date_range: dateRange as unknown as Record<string, unknown>,
         limit: 400,
       }),
@@ -173,6 +180,62 @@ export default function GoogleAdsDetail() {
     return conv > 0 ? (Number(r[COST]) || 0) / conv : 0;
   });
   const roasSeries = roasTrend.map((p) => p.value);
+  const impressionsSeries = sortedTrendRows.map((r) => Number(r[IMPRESSIONS]) || 0);
+  const clicksSeries = sortedTrendRows.map((r) => Number(r[CLICKS]) || 0);
+  const ctrSeries = sortedTrendRows.map((r) => Number(r[CTR]) || 0);
+
+  const heroCandidates: HeroCandidate[] = [
+    { key: "cost", label: t("googleAds.cost"), visualKeyword: "spend", format: currency, value: heroRow?.[COST] ?? 0, series: costSeries },
+    {
+      key: "purchase",
+      label: t("googleAds.purchase"),
+      visualKeyword: "purchase",
+      format: plainNumber,
+      value: heroRow?.[CONVERSIONS] ?? 0,
+      series: conversionsSeries,
+    },
+    {
+      key: "costPerConv",
+      label: t("googleAds.costPerConv"),
+      visualKeyword: "cost per",
+      format: currency,
+      value: heroRow?.[COST_PER_CONV] ?? 0,
+      series: costPerConvSeries,
+    },
+    {
+      key: "convValue",
+      label: t("googleAds.totalConvValue"),
+      visualKeyword: "value",
+      format: currency,
+      value: heroRow?.[CONV_VALUE] ?? 0,
+      series: convValueSeries,
+    },
+    { key: "roas", label: t("googleAds.roas"), visualKeyword: "roas", format: plainNumber, value: heroRoas, series: roasSeries },
+    {
+      key: "impressions",
+      label: t("metaAds.impressions"),
+      visualKeyword: "impressions",
+      format: plainNumber,
+      value: heroRow?.[IMPRESSIONS] ?? 0,
+      series: impressionsSeries,
+    },
+    {
+      key: "clicks",
+      label: t("metaAds.clicks"),
+      visualKeyword: "click",
+      format: plainNumber,
+      value: heroRow?.[CLICKS] ?? 0,
+      series: clicksSeries,
+    },
+    {
+      key: "ctr",
+      label: t("metaAds.ctr"),
+      visualKeyword: "ctr",
+      format: plainNumber,
+      value: heroRow?.[CTR] ?? 0,
+      series: ctrSeries,
+    },
+  ];
 
   const anyError = heroError ?? campaignError ?? keywordError ?? searchTermError ?? trendError;
   const errorMessage = anyError ? extractApiErrorMessage(anyError) ?? t("integrations.loadError") : undefined;
@@ -215,49 +278,13 @@ export default function GoogleAdsDetail() {
 
       {accountId && (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <HeroMetricCard
-              label={t("googleAds.cost")}
-              value={currency(heroRow?.[COST] ?? 0)}
-              icon={getMetricVisual("spend").icon}
-              tone={getMetricVisual("spend").tone}
-              variant="solid"
-              footer={costSeries.some((v) => v !== 0) ? <Sparkline data={costSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("googleAds.purchase")}
-              value={plainNumber(heroRow?.[CONVERSIONS] ?? 0)}
-              icon={getMetricVisual("purchase").icon}
-              tone={getMetricVisual("purchase").tone}
-              footer={conversionsSeries.some((v) => v !== 0) ? <Sparkline data={conversionsSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("googleAds.costPerConv")}
-              value={currency(heroRow?.[COST_PER_CONV] ?? 0)}
-              icon={getMetricVisual("cost per").icon}
-              tone={getMetricVisual("cost per").tone}
-              footer={costPerConvSeries.some((v) => v !== 0) ? <Sparkline data={costPerConvSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("googleAds.totalConvValue")}
-              value={currency(heroRow?.[CONV_VALUE] ?? 0)}
-              icon={getMetricVisual("value").icon}
-              tone={getMetricVisual("value").tone}
-              footer={convValueSeries.some((v) => v !== 0) ? <Sparkline data={convValueSeries} /> : undefined}
-              loading={heroLoading}
-            />
-            <HeroMetricCard
-              label={t("googleAds.roas")}
-              value={plainNumber(heroRoas)}
-              icon={getMetricVisual("roas").icon}
-              tone={getMetricVisual("roas").tone}
-              footer={roasSeries.some((v) => v !== 0) ? <Sparkline data={roasSeries} /> : undefined}
-              loading={heroLoading}
-            />
-          </div>
+          <SwappableHeroRow
+            defaultKeys={DEFAULT_HERO_KEYS}
+            candidates={heroCandidates}
+            loading={heroLoading}
+            resetKey={accountId}
+            columnsClass="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5"
+          />
 
           <BreakdownTable
             title={t("googleAds.campaignTable")}

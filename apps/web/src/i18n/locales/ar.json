@@ -216,7 +216,11 @@
     "byCity": "الجلسات حسب المدينة",
     "byItem": "الإيرادات حسب المنتج",
     "byCampaign": "الجلسات حسب حملة الجلسة",
-    "others": "أخرى"
+    "others": "أخرى",
+    "newUsers": "مستخدمون جدد",
+    "engagedSessions": "جلسات تفاعلية",
+    "pageViews": "مشاهدات الصفحة",
+    "avgSessionDuration": "متوسط مدة الجلسة"
   },
   "googleAds": {
     "cost": "التكلفة",
@@ -254,6 +258,22 @@
     "searchAds": "ابحث عن إعلان…",
     "noCampaigns": "لا توجد بيانات حملات لهذا النطاق.",
     "noAds": "لا توجد بيانات إعلانات لهذا النطاق.",
+    "roasOverTime": "عائد إنفاق المشتريات",
+    "totalImpressions": "إجمالي مرات الظهور",
+    "swipeUps": "السحبات لأعلى"
+  },
+  "metaAds": {
+    "impressions": "مرات الظهور",
+    "spend": "المبلغ المُنفق",
+    "purchases": "المشتريات",
+    "purchaseRoas": "عائد إنفاق المشتريات",
+    "linkClicks": "نقرات الرابط",
+    "reach": "الوصول",
+    "ctr": "نسبة النقر إلى الظهور",
+    "clicks": "النقرات",
+    "campaignTable": "الحملات",
+    "campaign": "اسم الحملة",
+    "noCampaigns": "لا توجد بيانات حملات لهذا النطاق.",
     "roasOverTime": "عائد إنفاق المشتريات"
   }
 }
