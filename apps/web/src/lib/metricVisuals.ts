@@ -26,18 +26,24 @@ interface MetricVisual {
 
 // Order matters — first keyword match wins, and this same order decides
 // which metrics are promoted to the "hero" cards at the top of the page.
+// Impressions / Spend / Purchases / Purchase ROAS lead the list (matching
+// the reference report the default cards are meant to mirror), each split
+// into its own dedicated bucket so it can't be shadowed by the broader
+// conversion/revenue buckets further down.
 const KEYWORD_VISUALS: { test: RegExp; icon: LucideIcon; tone: MetricTone }[] = [
   { test: /impression/i, icon: Eye, tone: "sky" },
-  { test: /click/i, icon: MousePointerClick, tone: "indigo" },
   { test: /spend|cost|budget/i, icon: Wallet, tone: "emerald" },
+  { test: /purchase/i, icon: Target, tone: "orange" },
+  { test: /\broas\b/i, icon: TrendingUp, tone: "emerald" },
+  { test: /click/i, icon: MousePointerClick, tone: "indigo" },
   { test: /reach|audience|follower|subscriber/i, icon: Users, tone: "violet" },
   { test: /ctr|rate|percentage/i, icon: Percent, tone: "teal" },
-  { test: /conversion|purchase|result|lead/i, icon: Target, tone: "orange" },
+  { test: /conversion|result|lead/i, icon: Target, tone: "orange" },
   { test: /like|engagement|reaction/i, icon: ThumbsUp, tone: "pink" },
   { test: /share/i, icon: Share2, tone: "teal" },
   { test: /comment/i, icon: MessageCircle, tone: "rose" },
   { test: /video|play|view/i, icon: PlayCircle, tone: "rose" },
-  { test: /revenue|roas|value|sale/i, icon: TrendingUp, tone: "emerald" },
+  { test: /revenue|value|sale/i, icon: TrendingUp, tone: "emerald" },
   { test: /rating|score/i, icon: Star, tone: "amber" },
   { test: /session|visit|activity/i, icon: Activity, tone: "indigo" },
   { test: /cart|order/i, icon: ShoppingCart, tone: "orange" },

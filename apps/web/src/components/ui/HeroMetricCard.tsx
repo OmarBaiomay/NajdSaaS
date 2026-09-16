@@ -26,6 +26,7 @@ export function HeroMetricCard({
   variant = "light",
   footer,
   loading,
+  menu,
 }: {
   label: string;
   value: ReactNode;
@@ -35,10 +36,14 @@ export function HeroMetricCard({
   footer?: ReactNode;
   /** First-load only — pulsing skeleton instead of the value/footer. */
   loading?: boolean;
+  /** Optional corner control (e.g. the swap-metric menu) — rendered over the
+   * top-end corner so it never disturbs the icon/label layout below it. */
+  menu?: ReactNode;
 }) {
   if (variant === "solid") {
     return (
-      <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 text-white shadow-lg shadow-slate-900/20 dark:from-brand-950 dark:to-slate-900">
+      <div className="relative rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 text-white shadow-lg shadow-slate-900/20 dark:from-brand-950 dark:to-slate-900">
+        {menu && <div className="absolute end-3 top-3 text-white/70 [&_svg]:stroke-current">{menu}</div>}
         <div className="flex items-start justify-between">
           <p className="text-xs font-medium uppercase tracking-wider text-white/60">{label}</p>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
@@ -61,8 +66,9 @@ export function HeroMetricCard({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-center gap-3">
+    <div className="relative rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {menu && <div className="absolute end-3 top-3">{menu}</div>}
+      <div className="flex items-center gap-3 pe-5">
         <span className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", LIGHT_ICON_STYLES[tone])}>
           <Icon size={16} />
         </span>

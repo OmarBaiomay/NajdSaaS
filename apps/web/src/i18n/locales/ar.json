@@ -96,6 +96,7 @@
     "someMetricsUnavailable_few": "{{count}} مقاييس غير متاحة لهذا الحساب وتم إخفاؤها.",
     "someMetricsUnavailable_many": "{{count}} مقياسًا غير متاح لهذا الحساب وتم إخفاؤها.",
     "someMetricsUnavailable_other": "{{count}} مقياس غير متاح لهذا الحساب وتم إخفاؤها.",
+    "swapMetric": "تبديل المقياس",
     "campaigns": "الحملات",
     "campaignName": "الحملة",
     "searchCampaigns": "ابحث عن حملة…",

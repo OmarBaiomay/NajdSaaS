@@ -15,6 +15,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { HeroMetricCard } from "@/components/ui/HeroMetricCard";
+import { HeroMetricSwapMenu } from "@/components/ui/HeroMetricSwapMenu";
 import { LoadingBar } from "@/components/ui/LoadingBar";
 import { SearchableSelect, type SearchableOption } from "@/components/ui/SearchableSelect";
 import { DateRangePicker, dateRangeLabel, DEFAULT_DATE_RANGE, type DateRangeValue } from "@/components/ui/DateRangePicker";
@@ -354,8 +355,37 @@ export default function IntegrationDetail() {
   );
 
   const heroMetrics = useMemo(() => pickHeroMetrics(ungrouped, totalsById, HERO_COUNT), [ungrouped, totalsById]);
-  const heroIds = useMemo(() => new Set(heroMetrics.map((f) => f.field_id)), [heroMetrics]);
-  const heroMetricIds = useMemo(() => heroMetrics.map((f) => f.field_id), [heroMetrics]);
+
+  // Lets the user swap any of the default hero cards for a different metric
+  // via the corner menu. Keyed by slot index, not field id, so swapping one
+  // slot never disturbs the others. Cleared when the account/data view
+  // changes, since an override picked for one account's field catalog may
+  // not even exist on another.
+  const [heroOverrides, setHeroOverrides] = useState<Record<number, string>>({});
+  useEffect(() => {
+    setHeroOverrides({});
+  }, [accountId, dataView]);
+
+  const swappableMetrics = useMemo(
+    () => ungrouped.filter((f) => (totalsById.get(f.field_id) ?? 0) !== 0),
+    [ungrouped, totalsById]
+  );
+
+  const effectiveHeroMetrics = useMemo(
+    () =>
+      heroMetrics.map((field, i) => {
+        const overrideId = heroOverrides[i];
+        if (!overrideId) return field;
+        return swappableMetrics.find((f) => f.field_id === overrideId) ?? field;
+      }),
+    [heroMetrics, heroOverrides, swappableMetrics]
+  );
+  const effectiveHeroIds = useMemo(
+    () => new Set(effectiveHeroMetrics.map((f) => f.field_id)),
+    [effectiveHeroMetrics]
+  );
+
+  const heroMetricIds = useMemo(() => effectiveHeroMetrics.map((f) => f.field_id), [effectiveHeroMetrics]);
 
   // Per-campaign breakdown table — the same "important" metrics shown in the
   // hero cards above, broken out by campaign instead of summed account-wide,
@@ -459,8 +489,8 @@ export default function IntegrationDetail() {
   );
 
   const restMetrics = useMemo(
-    () => ungrouped.filter((f) => !heroIds.has(f.field_id) && !namespaceGroupedIds.has(f.field_id)),
-    [ungrouped, heroIds, namespaceGroupedIds]
+    () => ungrouped.filter((f) => !effectiveHeroIds.has(f.field_id) && !namespaceGroupedIds.has(f.field_id)),
+    [ungrouped, effectiveHeroIds, namespaceGroupedIds]
   );
 
   const [showZeroMetrics, setShowZeroMetrics] = useState(false);
@@ -483,7 +513,7 @@ export default function IntegrationDetail() {
     : 0;
 
   const chartOptions: SearchableOption[] = availableMetrics.map((f) => ({ value: f.field_id, label: f.field_name }));
-  const effectiveChartMetric = chartMetric || fieldsData?.default_metric || heroMetrics[0]?.field_id || "";
+  const effectiveChartMetric = chartMetric || fieldsData?.default_metric || effectiveHeroMetrics[0]?.field_id || "";
   const chartMetricField = availableMetrics.find((f) => f.field_id === effectiveChartMetric);
   const primaryChartData = sortedRows.map((row) => ({
     label: String(row[dimensionField]),
@@ -603,14 +633,19 @@ export default function IntegrationDetail() {
             </p>
           )}
 
-          {heroMetrics.length > 0 && (
+          {effectiveHeroMetrics.length > 0 && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {heroMetrics.map((field, i) => {
+              {effectiveHeroMetrics.map((field, i) => {
                 const series = sortedRows.map((row) => Number(row[field.field_id]) || 0);
                 const { icon: Icon, tone } = getMetricVisual(field.field_name);
+                // Anything with data, not already headlining another slot —
+                // swapping one card can never create a duplicate.
+                const swapOptions = swappableMetrics.filter(
+                  (f) => f.field_id === field.field_id || !effectiveHeroIds.has(f.field_id)
+                );
                 return (
                   <HeroMetricCard
-                    key={field.field_id}
+                    key={`hero-${i}-${field.field_id}`}
                     label={field.field_name}
                     value={formatMetricValue(field.field_name, totalsById.get(field.field_id) ?? 0)}
                     icon={Icon}
@@ -618,6 +653,15 @@ export default function IntegrationDetail() {
                     variant={i === 0 ? "solid" : "light"}
                     footer={series.some((v) => v !== 0) ? <Sparkline data={series} /> : undefined}
                     loading={isFirstLoad}
+                    menu={
+                      hasData && swapOptions.length > 1 ? (
+                        <HeroMetricSwapMenu
+                          value={field.field_id}
+                          options={swapOptions}
+                          onSelect={(fieldId) => setHeroOverrides((prev) => ({ ...prev, [i]: fieldId }))}
+                        />
+                      ) : undefined
+                    }
                   />
                 );
               })}
@@ -678,7 +722,7 @@ export default function IntegrationDetail() {
                                 (effectiveCampaignSort.dir === "asc" ? "▲" : "▼")}
                             </button>
                           </th>
-                          {heroMetrics.map((field) => (
+                          {effectiveHeroMetrics.map((field) => (
                             <th key={field.field_id} className="px-4 py-3 text-start font-medium">
                               <button
                                 onClick={() => toggleCampaignSort(field.field_id)}
@@ -698,7 +742,7 @@ export default function IntegrationDetail() {
                             <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
                               {String(row[campaignDimension.field_id] ?? "—")}
                             </td>
-                            {heroMetrics.map((field) => (
+                            {effectiveHeroMetrics.map((field) => (
                               <td key={field.field_id} className="px-4 py-3">
                                 {formatMetricValue(field.field_name, Number(row[field.field_id]) || 0)}
                               </td>
